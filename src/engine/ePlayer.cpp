@@ -479,6 +479,14 @@ public:
         content = pwback;
     }
 
+    virtual tString GetPanelValue()
+    {
+        tString star;
+        for (int i=content->Len()-2; i>=0; i--)
+            star << "*";
+        return star;
+    }
+
     virtual bool Event(SDL_Event &e){
 #ifndef DEDICATED
         if (e.type==SDL_KEYDOWN &&

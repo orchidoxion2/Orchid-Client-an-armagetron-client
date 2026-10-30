@@ -365,6 +365,12 @@ public:
         ret << tOutput("$input_item_help");
         return ret;
     }
+
+    virtual PanelKind GetPanelKind(){ return PANEL_KEYS; }
+    virtual tString GetPanelLabel();
+    virtual tString GetPanelValue();
+private:
+    tString BoundKeys(); //!< names of the bound keys, separated by ", "; empty if unbound
 };
 
 #endif

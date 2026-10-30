@@ -2398,6 +2398,24 @@ static uMenuItemFunction sg_docMenuItem
 
 #endif
 
+//! opens the settings as a panel on the right side, over the menu it was chosen from
+class gSettingsPanelItem: public uMenuItemSubmenu
+{
+public:
+    gSettingsPanelItem( uMenu * M, uMenu * settings, tOutput const & help )
+        : uMenuItemSubmenu( M, settings, help ){}
+
+    void Enter() override
+    {
+        struct Panel
+        {
+            explicit Panel( uMenu * backdrop ){ uMenu::BeginPanel( backdrop ); }
+            ~Panel(){ uMenu::EndPanel(); }
+        } panel( menu );
+        uMenuItemSubmenu::Enter();
+    }
+};
+
 #ifndef DEDICATED
 //! menu that shows its items as picture boxes, once every item has a box
 class gBoxMenu: public uMenu
@@ -2725,7 +2743,7 @@ void MainMenu(bool ingame){
 
     uMenu Settings("$system_settings_menu_text");
 
-    uMenuItemSubmenu subm_settings
+    gSettingsPanelItem subm_settings
     (&MainMenu,&Settings,
      "$system_settings_menu_help");
 

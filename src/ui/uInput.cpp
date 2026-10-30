@@ -1874,26 +1874,8 @@ void uMenuItemInput::Render(REAL x,REAL y,REAL alpha,bool selected)
     }
     else
     {
-        tString s;
-
-        bool first=1;
-
-        for ( uInputs::const_iterator i = su_inputs.begin(); i != su_inputs.end(); ++i )
-        {
-            uBind * bind = (*i)->GetBind();
-            if ( bind && (*i)->Name().size() > 0 &&
-                    bind->act==act &&
-                    bind->CheckPlayer(ePlayer) )
-            {
-                if (!first)
-                    s << ", ";
-                else
-                    first=0;
-
-                s << (*i)->Name();
-            }
-        }
-        if (!first)
+        tString s = BoundKeys();
+        if (s.size() > 0)
         {
             DisplayText(REAL(x+.02),y,s,selected,alpha,-1);
         }
@@ -1902,6 +1884,44 @@ void uMenuItemInput::Render(REAL x,REAL y,REAL alpha,bool selected)
             DisplayText(REAL(x+.02),y,tOutput("$input_items_unbound"),selected,alpha,-1);
         }
     }
+}
+
+tString uMenuItemInput::BoundKeys()
+{
+    tString s;
+    bool first=1;
+
+    for ( uInputs::const_iterator i = su_inputs.begin(); i != su_inputs.end(); ++i )
+    {
+        uBind * bind = (*i)->GetBind();
+        if ( bind && (*i)->Name().size() > 0 &&
+                bind->act==act &&
+                bind->CheckPlayer(ePlayer) )
+        {
+            if (!first)
+                s << ", ";
+            else
+                first=0;
+
+            s << (*i)->Name();
+        }
+    }
+    return s;
+}
+
+tString uMenuItemInput::GetPanelLabel()
+{
+    return tString( act->description );
+}
+
+tString uMenuItemInput::GetPanelValue()
+{
+    if (active)
+        return tString( tOutput("$input_press_any_key") );
+    tString s = BoundKeys();
+    if (s.size() == 0)
+        s << tOutput("$input_items_unbound");
+    return s;
 }
 
 void uMenuItemInput::Enter()
