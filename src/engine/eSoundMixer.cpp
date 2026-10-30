@@ -338,7 +338,7 @@ void eSoundMixer::Init() {
     m_SoundEffects.resize(15);
     m_SoundEffects[CYCLE_TURN].LoadWavFile(vpath.GetReadPath("sound/cycle_turn.ogg") );
     m_SoundEffects[CYCLE_TURN].SetVolume(60);
-    m_SoundEffects[CYCLE_EXPLOSION].LoadWavFile(vpath.GetReadPath( "sound/expl.ogg" ));
+    m_SoundEffects[CYCLE_EXPLOSION].LoadWavFile(vpath.GetReadPath( "sound/expl.wav" ));
     m_SoundEffects[ANNOUNCER_1].LoadWavFile(vpath.GetReadPath("sound/1voicemale.ogg") );
     m_SoundEffects[ANNOUNCER_2].LoadWavFile(vpath.GetReadPath("sound/2voicemale.ogg") );
     m_SoundEffects[ANNOUNCER_3].LoadWavFile(vpath.GetReadPath("sound/3voicemale.ogg") );
@@ -348,7 +348,7 @@ void eSoundMixer::Init() {
     //m_SoundEffects[ROUND_WINNER].LoadWavFile(vpath.GetReadPath("sound/none.ogg") );
     //m_SoundEffects[MATCH_WINNER].LoadWavFile(vpath.GetReadPath("sound/none.ogg") );
     m_SoundEffects[ZONE_SPAWN].LoadWavFile(vpath.GetReadPath("sound/zone_spawn.ogg") );
-    m_SoundEffects[CYCLE_MOTOR].LoadWavFile(vpath.GetReadPath("sound/cyclrun.ogg") );
+    m_SoundEffects[CYCLE_MOTOR].LoadWavFile(vpath.GetReadPath("sound/cyclrun.wav") );
     m_SoundEffects[CYCLE_GRIND_WALL].LoadWavFile(vpath.GetReadPath("sound/grind.ogg") );
 
     Mix_Volume(-1, 50);

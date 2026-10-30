@@ -232,11 +232,11 @@ void eLegacyWavData::Load()
                     alt=true;
             }
             else{
-                result=SDL_LoadWAV(path.GetReadPath("sound/expl.ogg"), &spec, &byteData, &len);
+                result=SDL_LoadWAV(path.GetReadPath("sound/expl.wav"), &spec, &byteData, &len);
                 if (result!=&spec || !byteData)
                 {
                     tOutput err;
-                    err.SetTemplateParameter(1, "sound/expl.ogg");
+                    err.SetTemplateParameter(1, "sound/expl.wav");
                     err << "$sound_error_filenotfount";
                     throw tGenericException(err, errorName);
                 }
