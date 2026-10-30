@@ -263,7 +263,11 @@ public:
 
 // Font config items
 
-tString fontFile("Armagetronad.ttf");
+static char const * sr_defaultFontFile = "Inter-Medium.otf";
+// the previous default; saved configurations still name it, so it gets replaced as well
+static char const * sr_oldDefaultFontFile = "Armagetronad.ttf";
+
+tString fontFile(sr_defaultFontFile);
 static tConfItemLine ff("FONT_FILE", fontFile, &sr_ReloadFont);
 
 static tString customFont("");
@@ -305,7 +309,7 @@ FTFont &rFontContainer::New(int size) {
     if(useCustomFont == 1) {
         theFontFile = customFont;
     } else {
-        theFontFile = "textures/" + fontFile;
+        theFontFile = "textures/" + ( fontFile == sr_oldDefaultFontFile ? tString(sr_defaultFontFile) : fontFile );
         theFontFile = tDirectories::Data().GetReadPath(theFontFile);
     }
     font = Load(theFontFile);
@@ -315,7 +319,7 @@ FTFont &rFontContainer::New(int size) {
         std::cerr << "Error while loading font from path '" << theFontFile << "'. Error code: " << font->Error() << std::endl;
         //delete font;
         std::cerr << "Loading default font instead.  Sorry." << std::endl;
-        font = Load(tDirectories::Data().GetReadPath("textures/Armagetronad.ttf"));
+        font = Load(tDirectories::Data().GetReadPath(tString("textures/") + sr_defaultFontFile));
 
     }
     font->CharMap(ft_encoding_latin_1);
