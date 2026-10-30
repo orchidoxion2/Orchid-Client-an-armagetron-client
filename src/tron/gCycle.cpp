@@ -155,6 +155,11 @@ static REAL sg_speedCycleSoundMach=0.1f;
 static tSettingItem<REAL> c_ssm("CYCLE_SOUND_MACH",
                                sg_speedCycleSoundMach);
 
+// volume of the cycle engine sound
+static REAL sg_engineVolume=0.15f;
+static tConfItem<REAL> sg_engineVolumeConf("SOUND_ENGINE_VOLUME",
+                                           sg_engineVolume);
+
 // time after spawning it takes the cycle to start building a wall
 static REAL sg_cycleWallTime=0.0;
 static nSettingItemWatched<REAL>
@@ -4971,7 +4976,7 @@ void gCycle::SoundMix(Sint16 *dest,unsigned int len,
 
         if (engine)
         {
-            REAL const engineVolume = 0.3;
+            REAL const engineVolume = sg_engineVolume;
 
             REAL const dopplerPitchAdjusted = sg_speedCycleSoundMach*dopplerPitch/sg_speedCycleSound;
             REAL const dopplerFactor = dopplerPitchAdjusted > 0 ? 1 + dopplerPitchAdjusted : 1/(1 - dopplerPitchAdjusted);

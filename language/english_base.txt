@@ -701,6 +701,7 @@ camera_in_max_focus_distance_help     This, multiplied by the current speed, det
 #********************************************
 
 cycle_sound_mach_help                   Doppler effect strength; this is the mach number a cyle is moving at if it is driving at CYCLE_SOUND_SPEED
+sound_engine_volume_help                Volume of the cycle engine sounds
 sound_self_factor_help                  Amplitude suppression factor for your own engine sound or other looped sounds from game objects
 sound_receiver_size_help                Basic size of the virtual microphone in meters
 sound_receiver_size_distance_help       Additional size of the virtual microphone from the distance of the camera to its target
