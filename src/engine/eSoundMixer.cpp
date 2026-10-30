@@ -336,7 +336,7 @@ void eSoundMixer::Init() {
     //musFile = vpath.GetReadPath( titleTrack );
 
     m_SoundEffects.resize(15);
-    m_SoundEffects[CYCLE_TURN].LoadWavFile(vpath.GetReadPath("sound/cycle_turn.ogg") );
+    m_SoundEffects[CYCLE_TURN].LoadWavFile(vpath.GetReadPath("sound/cycle_turn.wav") );
     m_SoundEffects[CYCLE_TURN].SetVolume(60);
     m_SoundEffects[CYCLE_EXPLOSION].LoadWavFile(vpath.GetReadPath( "sound/expl.wav" ));
     m_SoundEffects[ANNOUNCER_1].LoadWavFile(vpath.GetReadPath("sound/1voicemale.ogg") );

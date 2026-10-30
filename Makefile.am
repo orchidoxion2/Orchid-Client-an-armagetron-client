@@ -111,7 +111,7 @@ nobase_texture_DATA=textures/cycle_body.png textures/cycle_wheel.png textures/di
 	textures/Inter-Medium.otf textures/Inter-OFL.txt
 
 nobase_sound_DATA=sound/1voicemale.ogg  sound/announcerGO.ogg  sound/expl.wav\
-	sound/2voicemale.ogg  sound/cycle_turn.ogg   sound/grind.ogg\
+	sound/2voicemale.ogg  sound/cycle_turn.wav   sound/grind.ogg\
 	sound/3voicemale.ogg  sound/zone_spawn.ogg\
     sound/cyclrun.wav
 
