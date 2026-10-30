@@ -1,128 +1,104 @@
 #!/usr/bin/env python3
-# Draws the neon artwork for the Orchi Tron box main menu into textures/menu/.
+# Draws the artwork for the Orchi Tron box main menu into textures/menu/.
+# Flat, clean style matching the server list: dark slate, light glyphs, one accent color.
 # All images are 512x256 with the subject centered; the menu crops, never stretches.
 # Usage: python3 orchi/make_menu_images.py
-import math
 import os
 import sys
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "textures", "menu")
 
-CYAN = (40, 220, 255)
-ORANGE = (255, 150, 30)
-GREEN = (60, 255, 140)
-RED = (255, 60, 70)
-GRID = (30, 60, 140)
+W, H = 512, 256
+SS = 4  # supersampling factor for smooth edges
+
+BG = (16, 21, 27)
+GRID = (28, 35, 43)
+GLYPH = (201, 209, 217)
+ACCENT = (77, 216, 232)
+ORANGE = (240, 160, 48)
 
 
-def glow(layer, radius):
-    """adds a soft glow around everything drawn on layer"""
-    halo = layer.filter(ImageFilter.GaussianBlur(radius))
-    return ImageChops.add(ImageChops.add(halo, halo), layer)
+def canvas():
+    img = Image.new("RGB", (W * SS, H * SS), BG)
+    return img, ImageDraw.Draw(img)
 
 
-def backdrop(w, h, step=32):
-    """black background with a faint grid"""
-    img = Image.new("RGB", (w, h), (0, 0, 0))
-    d = ImageDraw.Draw(img)
-    faint = tuple(c // 3 for c in GRID)
-    for x in range(0, w, step):
-        d.line([(x, 0), (x, h)], fill=faint)
-    for y in range(0, h, step):
-        d.line([(0, y), (w, y)], fill=faint)
-    return img
+def finish(img):
+    return img.resize((W, H), Image.LANCZOS)
 
 
-def play(w=512, h=256):
-    img = Image.new("RGB", (w, h), (0, 0, 0))
-    horizon = int(h * 0.38)
-    # sky gradient
-    d = ImageDraw.Draw(img)
-    for y in range(horizon):
-        t = y / horizon
-        d.line([(0, y), (w, y)], fill=(0, int(10 + 30 * t), int(25 + 60 * t)))
-    # perspective floor grid
-    lines = Image.new("RGB", (w, h))
-    d = ImageDraw.Draw(lines)
-    vx = w / 2
-    for i in range(-14, 15):
-        d.line([(vx, horizon), (vx + i * w / 9, h)], fill=GRID, width=1)
-    for k in range(1, 12):
-        y = horizon + (h - horizon) * (k / 11) ** 2
-        d.line([(0, y), (w, y)], fill=GRID, width=1)
-    d.line([(0, horizon), (w, horizon)], fill=CYAN, width=2)
-    img = ImageChops.add(img, glow(lines, 3))
-    # two light cycles with trails
-    trails = Image.new("RGB", (w, h))
-    d = ImageDraw.Draw(trails)
-    a = [(40, h - 10), (150, h - 70), (330, h - 70), (395, horizon + 30)]
-    b = [(w - 30, h - 20), (w - 120, h - 40), (w - 120, horizon + 45), (265, horizon + 18)]
-    d.line(a, fill=ORANGE, width=5, joint="curve")
-    d.line(b, fill=CYAN, width=5, joint="curve")
-    for (x, y), col, s in ((a[-1], ORANGE, 9), (b[-1], CYAN, 7)):
-        d.ellipse([x - s, y - s * .6, x + s, y + s * .6], fill=col)
-    img = ImageChops.add(img, glow(trails, 6))
-    return img
+def s(*v):
+    """scales design coordinates to the supersampled canvas"""
+    return [x * SS for x in v]
 
 
-def icon(draw_fn, color, w=512, h=256):
-    """wide canvas, icon centered: boxes show the middle part, never a stretched image"""
-    img = backdrop(w, h)
-    layer = Image.new("RGB", (w, h))
-    draw_fn(ImageDraw.Draw(layer), w, h, color)
-    # shrink the icon and move it up so the label strip at the bottom of the box leaves it free
-    scale = 0.75
-    small = layer.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-    layer = Image.new("RGB", (w, h))
-    layer.paste(small, ((w - small.width) // 2, 4))
-    return ImageChops.add(img, glow(layer, 6))
+def play():
+    img, d = canvas()
+    # top-down arena: subtle grid inside a rim
+    for x in range(32, W, 32):
+        d.line(s(x, 0, x, H), fill=GRID, width=SS)
+    for y in range(32, H, 32):
+        d.line(s(0, y, W, y), fill=GRID, width=SS)
+    d.rectangle(s(16, 16, W - 16, H - 16), outline=(60, 70, 82), width=3 * SS)
+    # two flat light trails with right-angle turns, square cycle heads
+    a = [(48, 208), (176, 208), (176, 112), (304, 112), (304, 64)]
+    b = [(464, 48), (400, 48), (400, 176), (240, 176)]
+    d.line([c * SS for p in a for c in p], fill=ORANGE, width=6 * SS, joint="curve")
+    d.line([c * SS for p in b for c in p], fill=ACCENT, width=6 * SS, joint="curve")
+    for (x, y), col in ((a[-1], ORANGE), (b[-1], ACCENT)):
+        d.rectangle(s(x - 9, y - 9, x + 9, y + 9), fill=col)
+    return finish(img)
 
 
-def rider(d, w, h, c):
-    cx = w / 2
-    # helmet
-    d.ellipse([cx - 52, 40, cx + 52, 144], outline=c, width=8)
-    d.line([(cx - 44, 100), (cx + 44, 100)], fill=c, width=8)
-    # shoulders
-    d.arc([cx - 100, 150, cx + 100, 330], 200, 340, fill=c, width=8)
+def icon(draw_fn):
+    img, d = canvas()
+    # icon area: upper part of the image, so the label strip of the box leaves it free
+    cx, cy, r = W / 2, 92, 62
+    draw_fn(d, cx, cy, r)
+    return finish(img)
 
 
-def gear(d, w, h, c):
-    cx, cy = w / 2, h / 2 - 8
+def player(d, cx, cy, r):
+    d.ellipse(s(cx - 26, cy - 52, cx + 26, cy), fill=GLYPH)
+    d.chord(s(cx - 52, cy + 8, cx + 52, cy + 112), 180, 360, fill=GLYPH)
+    d.rectangle(s(cx - 52, cy + 58, cx + 52, cy + 62), fill=ACCENT)
+
+
+def settings(d, cx, cy, r):
+    import math
     teeth = 8
     pts = []
     for i in range(teeth * 4):
-        ang = 2 * math.pi * i / (teeth * 4)
-        r = 82 if (i % 4) in (0, 1) else 62
-        pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
-    d.line(pts + [pts[0]], fill=c, width=7, joint="curve")
-    d.ellipse([cx - 26, cy - 26, cx + 26, cy + 26], outline=c, width=7)
+        ang = 2 * math.pi * (i - 0.5) / (teeth * 4)
+        rr = 60 if (i % 4) in (0, 1) else 46
+        pts.append(((cx + rr * math.cos(ang)) * SS, (cy + rr * math.sin(ang)) * SS))
+    d.polygon(pts, fill=GLYPH)
+    d.ellipse(s(cx - 20, cy - 20, cx + 20, cy + 20), fill=BG)
+    d.ellipse(s(cx - 8, cy - 8, cx + 8, cy + 8), fill=ACCENT)
 
 
-def question(d, w, h, c):
-    cx, cy = w / 2, h / 2 - 8
-    d.ellipse([cx - 88, cy - 88, cx + 88, cy + 88], outline=c, width=7)
-    d.arc([cx - 36, cy - 62, cx + 36, cy + 6], 180, 400, fill=c, width=9)
-    d.line([(cx + 12, cy + 2), (cx, cy + 14), (cx, cy + 32)], fill=c, width=9)
-    d.ellipse([cx - 7, cy + 50, cx + 7, cy + 64], fill=c)
+def help_(d, cx, cy, r):
+    d.ellipse(s(cx - 58, cy - 58, cx + 58, cy + 58), outline=GLYPH, width=8 * SS)
+    d.arc(s(cx - 24, cy - 38, cx + 24, cy + 6), 180, 400, fill=ACCENT, width=10 * SS)
+    d.line(s(cx + 8, cy + 2, cx, cy + 10, cx, cy + 20), fill=ACCENT, width=10 * SS, joint="curve")
+    d.ellipse(s(cx - 7, cy + 30, cx + 7, cy + 44), fill=ACCENT)
 
 
-def power(d, w, h, c):
-    cx, cy = w / 2, h / 2 - 8
-    d.arc([cx - 72, cy - 72, cx + 72, cy + 72], -60, 240, fill=c, width=10)
-    d.line([(cx, cy - 92), (cx, cy - 10)], fill=c, width=10)
+def exit_(d, cx, cy, r):
+    d.arc(s(cx - 52, cy - 52, cx + 52, cy + 52), -55, 235, fill=GLYPH, width=10 * SS)
+    d.line(s(cx, cy - 66, cx, cy - 6), fill=ACCENT, width=10 * SS)
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     images = {
         "play.png": play(),
-        "player.png": icon(rider, CYAN),
-        "settings.png": icon(gear, ORANGE),
-        "help.png": icon(question, GREEN),
-        "exit.png": icon(power, RED),
+        "player.png": icon(player),
+        "settings.png": icon(settings),
+        "help.png": icon(help_),
+        "exit.png": icon(exit_),
     }
     for name, img in images.items():
         img.save(os.path.join(OUT, name), optimize=True)

@@ -2467,11 +2467,11 @@ protected:
             RenderEnd();
 
             // frame
-            glLineWidth( sel ? 4 : 2 );
+            glLineWidth( sel ? 3 : 1 );
             if ( sel )
-                Color( 1, .3, .3, 1 );
+                Color( .3, .85, .91, 1 );
             else
-                Color( .6, .6, 1, .8 );
+                Color( .24, .27, .32, 1 );
             BeginLineLoop();
             Vertex( left,  box.bottom );
             Vertex( right, box.bottom );
