@@ -2398,6 +2398,179 @@ static uMenuItemFunction sg_docMenuItem
 
 #endif
 
+#ifndef DEDICATED
+//! menu that shows its items as picture boxes, once every item has a box
+class gBoxMenu: public uMenu
+{
+public:
+    explicit gBoxMenu(tOutput const & title): uMenu(title, false){}
+
+    //! puts an item into a box (menu coordinates: -1 to 1, y up) showing the image
+    void SetBox(uMenuItem * item, REAL left, REAL bottom, REAL right, REAL top, char const * image)
+    {
+        if ( item )
+            boxes_.push_back( Box{ item, left, bottom, right, top,
+                                   std::make_unique< rFileTexture >( rTextureGroups::TEX_OBJ, image ) } );
+    }
+
+protected:
+    void RenderItems() override
+    {
+        if ( !Complete() )
+        {
+            uMenu::RenderItems();
+            return;
+        }
+
+        RenderTitle();
+
+        static const REAL labelHeight = .13;
+        for ( auto const & box: boxes_ )
+        {
+            bool sel = IndexOf( box.item ) == selected;
+
+            // picture, dimmed unless selected
+            box.texture->Select();
+            Color( 1, 1, 1, sel ? 1 : .55 );
+            BeginQuads();
+            TexCoord( 0, 1 ); Vertex( box.left,  box.bottom );
+            TexCoord( 1, 1 ); Vertex( box.right, box.bottom );
+            TexCoord( 1, 0 ); Vertex( box.right, box.top );
+            TexCoord( 0, 0 ); Vertex( box.left,  box.top );
+            RenderEnd();
+            glDisable( GL_TEXTURE_2D );
+
+            // dark strip behind the label
+            Color( 0, 0, 0, .65 );
+            BeginQuads();
+            Vertex( box.left,  box.bottom );
+            Vertex( box.right, box.bottom );
+            Vertex( box.right, box.bottom + labelHeight );
+            Vertex( box.left,  box.bottom + labelHeight );
+            RenderEnd();
+
+            // frame
+            glLineWidth( sel ? 4 : 2 );
+            if ( sel )
+                Color( 1, .3, .3, 1 );
+            else
+                Color( .6, .6, 1, .8 );
+            BeginLineLoop();
+            Vertex( box.left,  box.bottom );
+            Vertex( box.right, box.bottom );
+            Vertex( box.right, box.top );
+            Vertex( box.left,  box.top );
+            RenderEnd();
+            glLineWidth( 1 );
+
+            rTextField::SetDefaultColor( tColor(1,1,1,1) );
+            rTextField::SetBlendColor( tColor(1,1,1,1) );
+            box.item->Render( ( box.left + box.right ) * .5, box.bottom + labelHeight * .5, 1, sel );
+        }
+    }
+
+    int ItemAt( int x, int y ) override
+    {
+        if ( !Complete() )
+            return uMenu::ItemAt( x, y );
+
+        int width = sr_screenWidth, height = sr_screenHeight;
+#if SDL_VERSION_ATLEAST(2,0,0)
+        if ( sr_screen )
+            SDL_GetWindowSize( sr_screen, &width, &height );
+#endif
+        if ( width <= 0 || height <= 0 )
+            return -1;
+
+        REAL menuX = 2 * REAL(x) / width - 1, menuY = 1 - 2 * REAL(y) / height;
+        for ( auto const & box: boxes_ )
+            if ( menuX >= box.left && menuX <= box.right && menuY >= box.bottom && menuY <= box.top )
+                return IndexOf( box.item );
+        return -1;
+    }
+
+    void HandleEvent( SDL_Event event ) override
+    {
+        if ( Complete() && event.type == SDL_KEYDOWN )
+        {
+            REAL dx = 0, dy = 0;
+            switch ( event.key.keysym.sym )
+            {
+            case SDLK_LEFT:  dx = -1; break;
+            case SDLK_RIGHT: dx =  1; break;
+            case SDLK_UP:    dy =  1; break;
+            case SDLK_DOWN:  dy = -1; break;
+            default: break;
+            }
+            if ( dx != 0 || dy != 0 )
+            {
+                Move( dx, dy );
+                return;
+            }
+        }
+        uMenu::HandleEvent( event );
+    }
+
+private:
+    struct Box
+    {
+        uMenuItem * item;
+        REAL left, bottom, right, top;
+        std::unique_ptr< rFileTexture > texture;
+    };
+    std::vector< Box > boxes_;
+
+    int IndexOf( uMenuItem const * item )
+    {
+        for ( int i = items.Len()-1; i >= 0; --i )
+            if ( items[i] == item )
+                return i;
+        return -1;
+    }
+
+    //! boxes are only used if every item has one
+    bool Complete()
+    {
+        if ( boxes_.empty() || int(boxes_.size()) != items.Len() )
+            return false;
+        for ( auto const & box: boxes_ )
+            if ( IndexOf( box.item ) < 0 )
+                return false;
+        return true;
+    }
+
+    //! selects the nearest box in the given direction
+    void Move( REAL dx, REAL dy )
+    {
+        Box const * current = nullptr;
+        for ( auto const & box: boxes_ )
+            if ( IndexOf( box.item ) == selected )
+                current = &box;
+        if ( !current )
+            return;
+
+        REAL cx = ( current->left + current->right ) * .5, cy = ( current->bottom + current->top ) * .5;
+        Box const * best = nullptr;
+        REAL bestScore = 0;
+        for ( auto const & box: boxes_ )
+        {
+            REAL ox = ( box.left + box.right ) * .5 - cx, oy = ( box.bottom + box.top ) * .5 - cy;
+            REAL along = ox * dx + oy * dy, across = fabsf( ox * dy - oy * dx );
+            if ( along <= 0 )
+                continue;
+            REAL score = along + 2 * across;
+            if ( !best || score < bestScore )
+            {
+                best = &box;
+                bestScore = score;
+            }
+        }
+        if ( best )
+            SetSelected( IndexOf( best->item ) );
+    }
+};
+#endif
+
 void MainMenu(bool ingame){
 #ifndef DEDICATED
     //	update_settings();
@@ -2473,7 +2646,7 @@ void MainMenu(bool ingame){
     else
         title << "$ingame_menu_text";
 
-    uMenu MainMenu(title,false);
+    gBoxMenu MainMenu(title);
 
     if (ingame)
         sg_IngameMenu = &MainMenu;
@@ -2625,6 +2798,13 @@ void MainMenu(bool ingame){
     {
         rViewport::Update(MAX_PLAYERS);
         // ePlayerNetID::Update();
+
+        // box layout: big play box and player box on top, help, settings and exit below
+        MainMenu.SetBox( gamemenuitem,   -.9, -.02,  .25,  .62, "textures/menu/play.png" );
+        MainMenu.SetBox( se_PlayerMenu,  .35, -.02,   .9,  .62, "textures/menu/player.png" );
+        MainMenu.SetBox( &help,          -.9, -.56,  -.4, -.12, "textures/menu/help.png" );
+        MainMenu.SetBox( &subm_settings, -.3, -.56,  .25, -.12, "textures/menu/settings.png" );
+        MainMenu.SetBox( &exx,           .35, -.56,   .9, -.12, "textures/menu/exit.png" );
     }
 
     MainMenu.Enter();

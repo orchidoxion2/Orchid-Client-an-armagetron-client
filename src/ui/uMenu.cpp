@@ -391,40 +391,7 @@ void uMenu::OnEnter(){
             return;
 
         if (sr_glOut && !exitFlag && !quickexit){
-            items[selected]->Render(center,YPos(selected),1,true);
-
-            for (int i=items.Len()-1;i>=0;i--)
-                if (i!=selected){
-                    REAL y=YPos(i);
-                    REAL alpha=1;
-                    const REAL b=.1;
-                    if (y<menuBot+b)
-                        alpha=(y-menuBot)/b;
-                    if (y>menuTop-b)
-                        alpha=(menuTop-y)/b;
-                    if (y>menuBot && y<menuTop)
-                    {
-                        rTextField::SetDefaultColor( tColor(1,1,1,1) );
-                        rTextField::SetBlendColor( tColor(1,1,1,1) );
-                        items[i]->Render(center,y,alpha,false);
-                    }
-                }
-
-            rTextField::SetDefaultColor( tColor(1,1,1,1) );
-            rTextField::SetBlendColor( tColor(1,1,1,1) );
-
-            Color(.6,.6,1,1);
-            ::DisplayText(0,menuTop+text_height*titlefac
-                          ,text_height*titlefac,
-                          title,sr_fontMenuTitle,0);
-
-            glDisable(GL_TEXTURE_2D);
-            //glDisable(GL_TEXTURE);
-            Color(1,.2,.2,.5);
-            if (YPos(0)<menuBot+smallborder && (int(tSysTimeFloat()))%2)
-                arrow(.9,menuBot+.1,-1,.05);
-            if (YPos(menuentries-1)>menuTop && (int(tSysTimeFloat())+1)%2)
-                arrow(.9,menuTop,1,.05);
+            RenderItems();
 
             REAL helpAlpha = tSysTimeFloat()-lastkey-timeout;
             if( helpAlpha > 1 )
@@ -576,6 +543,57 @@ void uMenu::HandleEvent( SDL_Event event )
     }
 
     su_inMenu = true;
+#endif
+}
+
+void uMenu::RenderItems()
+{
+#ifndef DEDICATED
+    const REAL smallborder=.1;
+
+    items[selected]->Render(center,YPos(selected),1,true);
+
+    for (int i=items.Len()-1;i>=0;i--)
+        if (i!=selected){
+            REAL y=YPos(i);
+            REAL alpha=1;
+            const REAL b=.1;
+            if (y<menuBot+b)
+                alpha=(y-menuBot)/b;
+            if (y>menuTop-b)
+                alpha=(menuTop-y)/b;
+            if (y>menuBot && y<menuTop)
+            {
+                rTextField::SetDefaultColor( tColor(1,1,1,1) );
+                rTextField::SetBlendColor( tColor(1,1,1,1) );
+                items[i]->Render(center,y,alpha,false);
+            }
+        }
+
+    rTextField::SetDefaultColor( tColor(1,1,1,1) );
+    rTextField::SetBlendColor( tColor(1,1,1,1) );
+
+    RenderTitle();
+
+    glDisable(GL_TEXTURE_2D);
+    //glDisable(GL_TEXTURE);
+    Color(1,.2,.2,.5);
+    if (YPos(0)<menuBot+smallborder && (int(tSysTimeFloat()))%2)
+        arrow(.9,menuBot+.1,-1,.05);
+    if (YPos(menuentries-1)>menuTop && (int(tSysTimeFloat())+1)%2)
+        arrow(.9,menuTop,1,.05);
+#endif
+}
+
+void uMenu::RenderTitle()
+{
+#ifndef DEDICATED
+    rTextField::SetDefaultColor( tColor(1,1,1,1) );
+    rTextField::SetBlendColor( tColor(1,1,1,1) );
+    Color(.6,.6,1,1);
+    ::DisplayText(0,menuTop+text_height*titlefac
+                  ,text_height*titlefac,
+                  title,sr_fontMenuTitle,0);
 #endif
 }
 

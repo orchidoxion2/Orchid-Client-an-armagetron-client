@@ -108,7 +108,9 @@ nobase_texture_DATA=textures/cycle_body.png textures/cycle_wheel.png textures/di
 	textures/tutorials/speedkilldefense/speedkilldefense.txt \
 	textures/tutorials/conquest/conquest.txt \
 	textures/Armagetronad.ttf \
-	textures/Inter-Medium.otf textures/Inter-OFL.txt
+	textures/Inter-Medium.otf textures/Inter-OFL.txt \
+	textures/menu/play.png textures/menu/player.png textures/menu/help.png \
+	textures/menu/settings.png textures/menu/exit.png
 
 nobase_sound_DATA=sound/1voicemale.ogg  sound/announcerGO.ogg  sound/expl.wav\
 	sound/2voicemale.ogg  sound/cycle_turn.wav   sound/grind.ogg\

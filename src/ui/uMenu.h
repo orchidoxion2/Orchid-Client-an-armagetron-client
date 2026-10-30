@@ -194,7 +194,13 @@ protected:
     int GetPrevSelectable(int start);
 
     //! returns the selectable item at the given window position (in SDL mouse coordinates), or -1
-    int ItemAt(int x, int y);
+    virtual int ItemAt(int x, int y);
+
+    //! renders the title and the items (not the help text)
+    virtual void RenderItems();
+
+    //! renders the title
+    void RenderTitle();
 
     //! activates the selected item, like pressing Enter
     void EnterSelected();
