@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Draws the neon artwork for the Orchi Tron box main menu into textures/menu/.
+# All images are 512x256 with the subject centered; the menu crops, never stretches.
 # Usage: python3 orchi/make_menu_images.py
 import math
 import os
@@ -66,11 +67,17 @@ def play(w=512, h=256):
     return img
 
 
-def icon(draw_fn, color, w=256, h=256):
+def icon(draw_fn, color, w=512, h=256):
+    """wide canvas, icon centered: boxes show the middle part, never a stretched image"""
     img = backdrop(w, h)
     layer = Image.new("RGB", (w, h))
     draw_fn(ImageDraw.Draw(layer), w, h, color)
-    return ImageChops.add(img, glow(layer, 7))
+    # shrink the icon and move it up so the label strip at the bottom of the box leaves it free
+    scale = 0.75
+    small = layer.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+    layer = Image.new("RGB", (w, h))
+    layer.paste(small, ((w - small.width) // 2, 4))
+    return ImageChops.add(img, glow(layer, 6))
 
 
 def rider(d, w, h, c):

@@ -2405,11 +2405,12 @@ class gBoxMenu: public uMenu
 public:
     explicit gBoxMenu(tOutput const & title): uMenu(title, false){}
 
-    //! puts an item into a box (menu coordinates: -1 to 1, y up) showing the image
-    void SetBox(uMenuItem * item, REAL left, REAL bottom, REAL right, REAL top, char const * image)
+    //! puts an item into a box showing the image (width/height ratio imageAspect);
+    //! coordinates: -1 to 1, y up, as on a 4:3 screen
+    void SetBox(uMenuItem * item, REAL left, REAL bottom, REAL right, REAL top, char const * image, REAL imageAspect)
     {
         if ( item )
-            boxes_.push_back( Box{ item, left, bottom, right, top,
+            boxes_.push_back( Box{ item, left, bottom, right, top, imageAspect,
                                    std::make_unique< rFileTexture >( rTextureGroups::TEX_OBJ, image ) } );
     }
 
@@ -2425,28 +2426,44 @@ protected:
         RenderTitle();
 
         static const REAL labelHeight = .13;
+        REAL const scaleX = ScaleX();
+        REAL const screenAspect = sr_screenHeight > 0 ? REAL(sr_screenWidth) / sr_screenHeight : 4.0/3.0;
         for ( auto const & box: boxes_ )
         {
             bool sel = IndexOf( box.item ) == selected;
+            REAL const left = box.left * scaleX, right = box.right * scaleX;
 
-            // picture, dimmed unless selected
+            // picture, dimmed unless selected; shows the centered part of the
+            // image that has the box's shape, so it is cropped, never stretched
+            REAL const boxAspect = ( right - left ) / ( box.top - box.bottom ) * screenAspect;
+            REAL u0 = 0, u1 = 1, v0 = 0, v1 = 1;
+            if ( boxAspect > box.imageAspect )
+            {
+                v0 = ( 1 - box.imageAspect / boxAspect ) * .5;
+                v1 = 1 - v0;
+            }
+            else
+            {
+                u0 = ( 1 - boxAspect / box.imageAspect ) * .5;
+                u1 = 1 - u0;
+            }
             box.texture->Select();
             Color( 1, 1, 1, sel ? 1 : .55 );
             BeginQuads();
-            TexCoord( 0, 1 ); Vertex( box.left,  box.bottom );
-            TexCoord( 1, 1 ); Vertex( box.right, box.bottom );
-            TexCoord( 1, 0 ); Vertex( box.right, box.top );
-            TexCoord( 0, 0 ); Vertex( box.left,  box.top );
+            TexCoord( u0, v1 ); Vertex( left,  box.bottom );
+            TexCoord( u1, v1 ); Vertex( right, box.bottom );
+            TexCoord( u1, v0 ); Vertex( right, box.top );
+            TexCoord( u0, v0 ); Vertex( left,  box.top );
             RenderEnd();
             glDisable( GL_TEXTURE_2D );
 
             // dark strip behind the label
             Color( 0, 0, 0, .65 );
             BeginQuads();
-            Vertex( box.left,  box.bottom );
-            Vertex( box.right, box.bottom );
-            Vertex( box.right, box.bottom + labelHeight );
-            Vertex( box.left,  box.bottom + labelHeight );
+            Vertex( left,  box.bottom );
+            Vertex( right, box.bottom );
+            Vertex( right, box.bottom + labelHeight );
+            Vertex( left,  box.bottom + labelHeight );
             RenderEnd();
 
             // frame
@@ -2456,17 +2473,26 @@ protected:
             else
                 Color( .6, .6, 1, .8 );
             BeginLineLoop();
-            Vertex( box.left,  box.bottom );
-            Vertex( box.right, box.bottom );
-            Vertex( box.right, box.top );
-            Vertex( box.left,  box.top );
+            Vertex( left,  box.bottom );
+            Vertex( right, box.bottom );
+            Vertex( right, box.top );
+            Vertex( left,  box.top );
             RenderEnd();
             glLineWidth( 1 );
 
             rTextField::SetDefaultColor( tColor(1,1,1,1) );
             rTextField::SetBlendColor( tColor(1,1,1,1) );
-            box.item->Render( ( box.left + box.right ) * .5, box.bottom + labelHeight * .5, 1, sel );
+            box.item->Render( ( left + right ) * .5, box.bottom + labelHeight * .5, 1, sel );
         }
+    }
+
+    //! the box layout is designed for 4:3; on wider screens it is narrowed to keep its shape
+    static REAL ScaleX()
+    {
+        if ( sr_screenWidth <= 0 || sr_screenHeight <= 0 )
+            return 1;
+        REAL const aspect = REAL(sr_screenWidth) / sr_screenHeight;
+        return aspect > 4.0/3.0 ? ( 4.0/3.0 ) / aspect : 1;
     }
 
     int ItemAt( int x, int y ) override
@@ -2482,7 +2508,7 @@ protected:
         if ( width <= 0 || height <= 0 )
             return -1;
 
-        REAL menuX = 2 * REAL(x) / width - 1, menuY = 1 - 2 * REAL(y) / height;
+        REAL menuX = ( 2 * REAL(x) / width - 1 ) / ScaleX(), menuY = 1 - 2 * REAL(y) / height;
         for ( auto const & box: boxes_ )
             if ( menuX >= box.left && menuX <= box.right && menuY >= box.bottom && menuY <= box.top )
                 return IndexOf( box.item );
@@ -2516,6 +2542,7 @@ private:
     {
         uMenuItem * item;
         REAL left, bottom, right, top;
+        REAL imageAspect;
         std::unique_ptr< rFileTexture > texture;
     };
     std::vector< Box > boxes_;
@@ -2799,12 +2826,12 @@ void MainMenu(bool ingame){
         rViewport::Update(MAX_PLAYERS);
         // ePlayerNetID::Update();
 
-        // box layout: big play box and player box on top, help, settings and exit below
-        MainMenu.SetBox( gamemenuitem,   -.9, -.02,  .25,  .62, "textures/menu/play.png" );
-        MainMenu.SetBox( se_PlayerMenu,  .35, -.02,   .9,  .62, "textures/menu/player.png" );
-        MainMenu.SetBox( &help,          -.9, -.56,  -.4, -.12, "textures/menu/help.png" );
-        MainMenu.SetBox( &subm_settings, -.3, -.56,  .25, -.12, "textures/menu/settings.png" );
-        MainMenu.SetBox( &exx,           .35, -.56,   .9, -.12, "textures/menu/exit.png" );
+        // box layout: big play box and settings on top, player setup, help and exit below
+        MainMenu.SetBox( gamemenuitem,   -.9, -.02,  .25,  .62, "textures/menu/play.png", 2 );
+        MainMenu.SetBox( &subm_settings, .35, -.02,   .9,  .62, "textures/menu/settings.png", 2 );
+        MainMenu.SetBox( se_PlayerMenu,  -.9, -.56,  -.4, -.12, "textures/menu/player.png", 2 );
+        MainMenu.SetBox( &help,          -.3, -.56,  .25, -.12, "textures/menu/help.png", 2 );
+        MainMenu.SetBox( &exx,           .35, -.56,   .9, -.12, "textures/menu/exit.png", 2 );
     }
 
     MainMenu.Enter();
