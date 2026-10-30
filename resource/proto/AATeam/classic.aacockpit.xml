@@ -214,10 +214,6 @@
                         <Cell><Text value="Running for:" /></Cell>
                         <Cell><GameData data="seconds" /><Text value=" Seconds" /></Cell>
                     </Row>
-                    <Row>
-                        <Cell><Text value="Music:" /></Cell>
-                        <Cell><GameData data="song" /></Cell>
-                    </Row>
                 </Table>
             </Face>
         </Label>

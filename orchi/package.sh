@@ -24,6 +24,9 @@ make -j"$(nproc)"
 rm -rf "${APPDIR:?}"
 make install DESTDIR="$APPDIR"
 
+# Orchi Tron plays no music, don't ship it
+rm -rf "${APPDIR:?}/usr/share/games/armagetronad/music"
+
 # upstream portable packaging: AppRun launcher, desktop file, icon, known libraries
 cd "$ROOT/docker/build/context"
 APPDIR="$APPDIR" PACKAGE=armagetronad portable/build > "$OUT/portable.log"

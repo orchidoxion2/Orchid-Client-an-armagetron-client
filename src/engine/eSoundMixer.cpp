@@ -106,7 +106,8 @@ static tConfItem<int> sw("MUSIC_VOLUME",musicVolume);
 int numSoundcardChannels=2;
 static tConfItem<int> scc("SOUND_CHANNELS",numSoundcardChannels);
 
-int musicActive = 1;
+// this client plays no music; the setting is only kept so old config files load cleanly
+int musicActive = 0;
 static tConfItem<int> se("MUSIC_ACTIVE", musicActive);
 
 float buffersize = 1.0;
@@ -162,11 +163,7 @@ eSoundMixer::eSoundMixer()
     m_Grid = NULL;
     m_Playlist = NULL;
 
-    if(musicActive == 1) {
-        m_PlayMusic = true;
-    } else {
-        m_PlayMusic = false;
-    }
+    m_PlayMusic = false;
 #endif // DEDICATED
 }
 
@@ -300,10 +297,6 @@ void eSoundMixer::Init() {
         return;
     }
 
-    // Register music finished callback
-    Mix_VolumeMusic( musicVolume );
-    Mix_HookMusicFinished( &eSoundMixer::SDLMusicFinished );
-
     // register old school sound filler callback
     Mix_SetPostMix( &fill_audio, NULL );
 
@@ -312,26 +305,31 @@ void eSoundMixer::Init() {
     // We haven't started playing any music yet
     m_musicIsPlaying = false;
 
-    tString musFile;
+    if ( m_PlayMusic )
+    {
+        // Register music finished callback
+        Mix_VolumeMusic( musicVolume );
+        Mix_HookMusicFinished( &eSoundMixer::SDLMusicFinished );
 
-    musFile = vpath.GetReadPath( titleTrack );
+        tString musFile;
+
+        musFile = vpath.GetReadPath( titleTrack );
 #ifdef DEBUG
-    std::cout << titleTrack << "\n";
+        std::cout << titleTrack << "\n";
 #endif
-    m_TitleTrack.reset(new eMusicTrack(musFile, true));
-    musFile = vpath.GetReadPath( guiTrack );
+        m_TitleTrack.reset(new eMusicTrack(musFile, true));
+        musFile = vpath.GetReadPath( guiTrack );
 #ifdef DEBUG
-    std::cout << guiTrack << "\n";
+        std::cout << guiTrack << "\n";
 #endif
-    m_GuiTrack.reset(new eMusicTrack(musFile, true));
+        m_GuiTrack.reset(new eMusicTrack(musFile, true));
 
-    //m_GuiTrack->Loop();
+        // Don't load a file for this, we don't know what we're playing until it's time
+        // to play.
+        m_GameTrack.reset(new eMusicTrack());
 
-    // Don't load a file for this, we don't know what we're playing until it's time
-    // to play.
-    m_GameTrack.reset(new eMusicTrack());
-
-    LoadPlaylist();
+        LoadPlaylist();
+    }
 
     // Now we're done with music and initializing sdl_mixer, we'll setup the sound
     // effect stuff
@@ -515,7 +513,7 @@ void eSoundMixer::Update() {
     }
 
     // We only act on music if the mode has changed, indicated by m_isDirty
-    if (m_isDirty) {
+    if (m_PlayMusic && m_isDirty) {
         // Also, we only update if the music has stopped for some reason.
         if(!m_musicIsPlaying) {
 
@@ -647,26 +645,6 @@ static uSelectEntry<int> d(sq_men,
                            "$sound_menu_quality_high_help",
                            SOUND_HIGH);
 
-static uMenuItemSelection<int> bm_men
-(&Sound_menu,
- "$sound_playlist_text",
- "$sound_playlist_help",
- usePlaylist);
-
-static uSelectEntry<int> ba(bm_men,
-                            "$sound_playlistinternal_text",
-                            "$sound_playlistinternal_help",
-                            0);
-
-static uSelectEntry<int> bb(bm_men,
-                            "$sound_playlistcustom_text",
-                            "$sound_playlistcustom_help",
-                            1);
-
-static uMenuItemString bc(&Sound_menu, "$sound_customplaylist_text",
-                          "$sound_customplaylist_help",
-                          customPlaylist, 255);
-
 void se_SoundMenu(){
     int oldUsePlaylist = usePlaylist;
     tString oldCustomPlaylist = customPlaylist;
@@ -678,14 +656,6 @@ void se_SoundMenu(){
 
 // Media player keybinds
 #include "uInput.h"
-
-static uActionGlobal mediaPlay("MUSIC_PLAY");
-static uActionGlobal mediaNext("MUSIC_NEXT");
-static uActionGlobal mediaPrev("MUSIC_PREVIOUS");
-static uActionGlobal mediaStop("MUSIC_STOP");
-static uActionGlobal mediaPause("MUSIC_PAUSE");
-static uActionGlobal mediaVolumeUp("MUSIC_VOLUME_UP");
-static uActionGlobal mediaVolumeDown("MUSIC_VOLUME_DOWN");
 
 bool eSoundMixer::Music_play(REAL x=1){
     if (x>0){
@@ -800,13 +770,6 @@ bool eSoundMixer::Music_previous_song(REAL x=1) {
     return true;
 }
 
-static uActionGlobalFunc mediapl(&mediaPlay,&eSoundMixer::Music_play, true );
-static uActionGlobalFunc medianext(&mediaNext,&eSoundMixer::Music_next_song, true );
-static uActionGlobalFunc mediaprev(&mediaPrev,&eSoundMixer::Music_previous_song, true );
-static uActionGlobalFunc mediast(&mediaStop,&eSoundMixer::Music_stop, true );
-static uActionGlobalFunc mediapa(&mediaPause,&eSoundMixer::Music_pause, true );
-static uActionGlobalFunc mediavu(&mediaVolumeUp,&eSoundMixer::Music_volume_up, true );
-static uActionGlobalFunc mediavd(&mediaVolumeDown,&eSoundMixer::Music_volume_down, true );
 #else
 
 void se_SoundMenu(){
