@@ -1382,6 +1382,11 @@ export CXXFLAGS
 
 fi dnl (dedicated server)
 
+dnl the client branch above switches to C; do the same for the server,
+dnl or the function checks below fail under -Werror in C++ mode
+AC_LANG([C++])
+AC_LANG([C])
+
 dnl set protobuf libs only here at the bottom so any custom ones
 dnl get found before the regular ones from any generic /usr libary
 dnl include flags from other libraries
