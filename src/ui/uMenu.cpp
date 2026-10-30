@@ -159,6 +159,39 @@ bool uMenu::MenuActive()
 static rNoAutoDisplayAtNewlineCallback su_noNewline( uMenu::MenuActive );
 // static rSmallConsoleCallback su_smallConsole( su_InMenu );
 
+#ifndef DEDICATED
+// frees and shows the mouse cursor while a menu is open; afterwards,
+// restores the mode the screen code uses (hidden and relative in fullscreen)
+class uMenuMouseGuard
+{
+public:
+    uMenuMouseGuard(){ Free(); }
+    ~uMenuMouseGuard()
+    {
+        if ( !sr_screen )
+            return;
+        bool fullscreen = currentScreensetting.fullscreen;
+#if SDL_VERSION_ATLEAST(2,0,0)
+        SDL_SetRelativeMouseMode( fullscreen ? SDL_TRUE : SDL_FALSE );
+#endif
+        SDL_ShowCursor( fullscreen ? SDL_DISABLE : SDL_ENABLE );
+    }
+
+    //! call every frame: the screen code may lock the mouse again on mode changes
+    void Free()
+    {
+        if ( !sr_screen )
+            return;
+#if SDL_VERSION_ATLEAST(2,0,0)
+        if ( SDL_GetRelativeMouseMode() )
+            SDL_SetRelativeMouseMode( SDL_FALSE );
+#endif
+        if ( SDL_ShowCursor( SDL_QUERY ) != SDL_ENABLE )
+            SDL_ShowCursor( SDL_ENABLE );
+    }
+};
+#endif
+
 void uMenu::OnEnter(){
 #ifndef DEDICATED
     bool localRepeat = false;
@@ -180,6 +213,10 @@ void uMenu::OnEnter(){
 
     if (items.Len()<=0)
         return;
+
+#ifndef DEDICATED
+    uMenuMouseGuard mouseGuard;
+#endif
 
     exitFlag=0;
     yOffset=menuTop;
@@ -290,6 +327,10 @@ void uMenu::OnEnter(){
                     repeatrate = repeatrateMin;
             }
         }
+
+#ifndef DEDICATED
+        mouseGuard.Free();
+#endif
 
         // we're about to render, last chance to make changes to the menu
         OnRender();
@@ -463,39 +504,7 @@ void uMenu::HandleEvent( SDL_Event event )
             case(SDLK_SPACE):
                         case(SDLK_KP_ENTER):
                             case(SDLK_RETURN):
-                                    s_globalRepeat = false;
-                try
-        {
-                    su_inMenu = false;
-                    items[selected]->Enter();
-                }
-                catch (tException const & e)
-                {
-                    uMenu::SetIdle(NULL);
-
-                    // inform user of generic errors
-                    tConsole::Message( e.GetName(), e.GetDescription(), 20 );
-                }
-#ifdef _MSC_VER
-#pragma warning ( disable : 4286 )
-                // GRR. Visual C++ dones not handle generic exceptions with the above general statement.
-                // A specialized version is needed. The best part: it warns about the code below being redundant.
-                catch ( tGenericException const & e )
-                {
-                    try
-                    {
-                        tConsole::Message( e.GetName(), e.GetDescription(), 20 );
-                    }
-                    catch (...)
-                    {
-                    }
-                }
-#endif
-
-                su_inMenu = true;
-
-                s_globalRepeat = false;
-                lastkey=tSysTimeFloat();
+                EnterSelected();
                 break;
 
             default:
@@ -505,6 +514,60 @@ void uMenu::HandleEvent( SDL_Event event )
             }
         }
         break;
+
+        // mouse: hover selects, left click activates, right click goes back, wheel moves
+        case SDL_MOUSEMOTION:
+        {
+            int item = ItemAt( event.motion.x, event.motion.y );
+            if ( item >= 0 && item != selected )
+            {
+                lastkey=tSysTimeFloat();
+                SetSelected( item );
+            }
+            su_HandleEvent( event, true );
+        }
+        break;
+        case SDL_MOUSEBUTTONDOWN:
+            if ( event.button.button == SDL_BUTTON_LEFT )
+            {
+                int item = ItemAt( event.button.x, event.button.y );
+                if ( item >= 0 )
+                {
+                    SetSelected( item );
+                    EnterSelected();
+                    break;
+                }
+            }
+            else if ( event.button.button == SDL_BUTTON_RIGHT )
+            {
+                s_globalRepeat = false;
+                lastkey=tSysTimeFloat();
+                Exit();
+                break;
+            }
+#if !SDL_VERSION_ATLEAST(2,0,0)
+            else if ( event.button.button == SDL_BUTTON_WHEELUP )
+            {
+                SetSelected(GetNextSelectable(selected));
+                break;
+            }
+            else if ( event.button.button == SDL_BUTTON_WHEELDOWN )
+            {
+                SetSelected(GetPrevSelectable(selected));
+                break;
+            }
+#endif
+            su_HandleEvent( event, true );
+            break;
+#if SDL_VERSION_ATLEAST(2,0,0)
+        case SDL_MOUSEWHEEL:
+            lastkey=tSysTimeFloat();
+            if ( event.wheel.y > 0 )
+                SetSelected(GetNextSelectable(selected));
+            else if ( event.wheel.y < 0 )
+                SetSelected(GetPrevSelectable(selected));
+            break;
+#endif
         default:
             // let the input subsystem handle events for later processing
             su_HandleEvent( event, true );
@@ -514,6 +577,70 @@ void uMenu::HandleEvent( SDL_Event event )
 
     su_inMenu = true;
 #endif
+}
+
+void uMenu::EnterSelected()
+{
+#ifndef DEDICATED
+    s_globalRepeat = false;
+    try
+    {
+        su_inMenu = false;
+        items[selected]->Enter();
+    }
+    catch (tException const & e)
+    {
+        uMenu::SetIdle(NULL);
+
+        // inform user of generic errors
+        tConsole::Message( e.GetName(), e.GetDescription(), 20 );
+    }
+#ifdef _MSC_VER
+#pragma warning ( disable : 4286 )
+    // GRR. Visual C++ dones not handle generic exceptions with the above general statement.
+    // A specialized version is needed. The best part: it warns about the code below being redundant.
+    catch ( tGenericException const & e )
+    {
+        try
+        {
+            tConsole::Message( e.GetName(), e.GetDescription(), 20 );
+        }
+        catch (...)
+        {
+        }
+    }
+#endif
+
+    su_inMenu = true;
+
+    s_globalRepeat = false;
+    lastkey=tSysTimeFloat();
+#endif
+}
+
+int uMenu::ItemAt(int x, int y)
+{
+#ifndef DEDICATED
+    int width = sr_screenWidth, height = sr_screenHeight;
+#if SDL_VERSION_ATLEAST(2,0,0)
+    if ( sr_screen )
+        SDL_GetWindowSize( sr_screen, &width, &height );
+#endif
+    if ( height <= 0 )
+        return -1;
+
+    // menu coordinates go from -1 (bottom) to 1 (top); items are centered on YPos
+    REAL menuY = 1 - 2 * REAL(y) / height;
+    if ( menuY <= menuBot || menuY >= menuTop )
+        return -1;
+
+    for ( int i = items.Len()-1; i >= 0; --i )
+    {
+        if ( fabsf( menuY - YPos(i) ) <= text_height * .5 && items[i]->IsSelectable() )
+            return i;
+    }
+#endif
+    return -1;
 }
 
 // select the menu item below "start"

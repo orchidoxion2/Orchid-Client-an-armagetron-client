@@ -193,6 +193,12 @@ protected:
     int GetNextSelectable(int start);
     int GetPrevSelectable(int start);
 
+    //! returns the selectable item at the given window position (in SDL mouse coordinates), or -1
+    int ItemAt(int x, int y);
+
+    //! activates the selected item, like pressing Enter
+    void EnterSelected();
+
     //! called every frame before the menu is rendered
     virtual void OnRender();
 };
