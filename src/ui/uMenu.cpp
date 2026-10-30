@@ -175,6 +175,8 @@ static bool     su_renderingBackdrop = false;
 static tString  su_panelSearch;
 static bool     su_panelSearchFocus = false;
 static REAL     su_panelMouseX = -10, su_panelMouseY = -10;
+static REAL     su_panelAnimTime = 0;          // time the slide in animation has run
+static double   su_panelAnimLast = -1;         // time of the last panel frame
 
 void uMenu::BeginPanel( uMenu * backdrop )
 {
@@ -186,6 +188,8 @@ void uMenu::BeginPanel( uMenu * backdrop )
     su_panelClose = false;
     su_panelSearch.Clear();
     su_panelSearchFocus = false;
+    su_panelAnimTime = 0;
+    su_panelAnimLast = -1;
 }
 
 void uMenu::EndPanel()
@@ -839,7 +843,17 @@ void uMenu::RenderPanel()
 
     REAL const aspect = sr_screenHeight > 0 ? REAL( sr_screenWidth ) / sr_screenHeight : 4.0/3.0;
     REAL const width = std::min( REAL( 1.4 ), REAL( 1.65 / aspect ) );
-    REAL const left = 1 - width, railRight = left + width * .3;
+
+    // slide in from the right edge, quickly at first, slowing down at the end;
+    // a slow frame (fonts are prepared on the first one) pauses the slide instead of skipping it
+    double const now = tSysTimeFloat();
+    if ( su_panelAnimLast >= 0 )
+        su_panelAnimTime += std::min( now - su_panelAnimLast, 1.0 / 30 );
+    su_panelAnimLast = now;
+    REAL const progress = std::min( REAL( 1 ), REAL( su_panelAnimTime / .25 ) );
+    REAL const ease = 1 - ( 1 - progress ) * ( 1 - progress ) * ( 1 - progress );
+
+    REAL const left = 1 - width * ease, railRight = left + width * .3;
     REAL const cl = railRight + .05, cr = .96;
 
     // the menu the panel came from, dimmed
@@ -849,7 +863,7 @@ void uMenu::RenderPanel()
         su_panelBackdrop->RenderItems();
         su_renderingBackdrop = false;
     }
-    pn_Rect( -1, -1, 1, 1, pn_dim );
+    pn_Rect( -1, -1, 1, 1, uPanelColor{ pn_dim.r, pn_dim.g, pn_dim.b, pn_dim.a * ease } );
     pn_Hit( -1, -1, left, 1, HIT_OUTSIDE );
 
     pn_Rect( left, -1, railRight, 1, pn_rail );

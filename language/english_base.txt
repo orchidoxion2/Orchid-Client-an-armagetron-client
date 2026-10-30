@@ -2003,6 +2003,13 @@ misc_menu_help			Diverse items that had no place elsewhere, i.e. global keys.
 misc_global_key_text		Global Keyboard Configuration
 misc_global_key_help		Some keyboard settings independent of the current player.
 
+settings_controls_text		Controls
+settings_controls_help		Key bindings: driving, camera and global keys.
+settings_controls_player_text	Player \1 Controls
+settings_controls_player_help	Keys for turning, braking and the other driving actions of player \1.
+settings_controls_camera_text	Player \1 Camera Controls
+settings_controls_camera_help	Keys for camera views and glancing of player \1.
+
 misc_menuwrap_text		Menu Wrap:
 misc_menuwrap_help		What happens if you are at the top of the menu and press up?
 

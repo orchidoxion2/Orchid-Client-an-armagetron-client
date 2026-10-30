@@ -2820,6 +2820,32 @@ void MainMenu(bool ingame){
             (&Settings,"$sound_menu_text",
              "$sound_menu_help",&se_SoundMenu);
 
+    // all key bindings in one place: players' driving and camera keys, global keys
+    uMenu controls("$settings_controls_text");
+    uMenuItemFunction controlsGlobal
+    (&controls,"$misc_global_key_text",
+     "$misc_global_key_help",
+     &su_InputConfigGlobal);
+    std::vector< std::unique_ptr< uMenuItem > > controlsItems;
+    for ( int p = MAX_PLAYERS-1; p >= 0; --p )
+    {
+        controlsItems.emplace_back( new uMenuItemDivider( &controls ) );
+        tOutput camera, camerahelp, input, inputhelp;
+        camera.SetTemplateParameter( 1, p+1 );
+        camera << "$settings_controls_camera_text";
+        camerahelp.SetTemplateParameter( 1, p+1 );
+        camerahelp << "$settings_controls_camera_help";
+        input.SetTemplateParameter( 1, p+1 );
+        input << "$settings_controls_player_text";
+        inputhelp.SetTemplateParameter( 1, p+1 );
+        inputhelp << "$settings_controls_player_help";
+        controlsItems.emplace_back( new uMenuItemFunctionInt( &controls, camera, camerahelp, &su_InputConfigCamera, p ) );
+        controlsItems.emplace_back( new uMenuItemFunctionInt( &controls, input, inputhelp, &su_InputConfig, p ) );
+    }
+    uMenuItemSubmenu controls_sm
+    (&Settings,&controls,
+     "$settings_controls_help");
+
     uMenuItemSubmenu subm
     (&Settings,&sg_screenMenu,
      "$display_settings_menu_help");
