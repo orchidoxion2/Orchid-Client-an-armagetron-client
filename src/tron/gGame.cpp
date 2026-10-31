@@ -101,6 +101,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "gSpotify.h"
 #include "gPathFinder.h"
 #include "cockpit/cLeaderboard.h"
+#include "gCockpitEditor.h"
 gArena Arena;
 
 static gTutorialBase * sg_tutorial = NULL;
@@ -2869,6 +2870,25 @@ void MainMenu(bool ingame){
 
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
+
+    class gCustomHudItem: public uMenuItem
+    {
+    public:
+        explicit gCustomHudItem( uMenu * menu ): uMenuItem( menu, "$customization_custom_hud_help" ){}
+        void Render( REAL x, REAL y, REAL alpha, bool selected ) override
+        {
+            tString text( tOutput( "$customization_custom_hud_text" ) );
+            text << " " << tOutput( gCockpitEditor::UsingCustom() ? "$menuitem_toggle_on" : "$menuitem_toggle_off" );
+            DisplayText( x, y, text, selected, alpha );
+        }
+        void LeftRight( int ) override { gCockpitEditor::UseCustom( !gCockpitEditor::UsingCustom() ); }
+        void Enter() override { LeftRight( 1 ); }
+        PanelKind GetPanelKind() override { return PANEL_TOGGLE; }
+        tString GetPanelLabel() override { return tString( tOutput( "$customization_custom_hud_text" ) ); }
+        bool GetPanelState() override { return gCockpitEditor::UsingCustom(); }
+    } customHud( &customization );
+    uMenuItemFunction hudEditor( &customization, "$customization_hud_editor_text",
+                                 "$customization_hud_editor_help", &gCockpitEditor::Open );
 
     uMenu chatLook("$customization_chat_text");
     uMenuItemSelection<int> chatFont( &chatLook, "$customization_chat_font_text", "$customization_chat_font_help", sr_chatFont );

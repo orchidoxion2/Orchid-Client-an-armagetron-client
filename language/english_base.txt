@@ -2058,6 +2058,11 @@ customization_chat_font_2_text	Armagetron Classic
 customization_chat_font_3_text	DejaVu Sans
 customization_chat_font_4_text	JetBrains Mono
 
+customization_hud_editor_text	Open HUD Editor
+customization_hud_editor_help	Move, resize, add and remove the parts of your in-game HUD with the mouse, then save it as your own HUD.
+customization_custom_hud_text	Custom HUD:
+customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Off: the HUD that comes with the game. Your own HUD is kept either way.
+
 settings_experimental_text	Experimental
 settings_experimental_help	Features that are still being tried out.
 

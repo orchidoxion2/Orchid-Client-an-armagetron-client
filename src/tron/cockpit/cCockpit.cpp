@@ -75,6 +75,30 @@ static rCallbackAfterScreenModeChange reloadft(&readjust_cockpit);
 static tString cockpit_file("Anonymous/standard-0.0.1.aacockpit.xml");
 static tConfItem<tString> cf("COCKPIT_FILE",cockpit_file,&parsecockpit);
 
+tString const & cCockpit::File()
+{
+    return cockpit_file;
+}
+
+tString cCockpit::DefaultFile()
+{
+    return tString( "Anonymous/standard-0.0.1.aacockpit.xml" );
+}
+
+void cCockpit::UseFile( tString const & file )
+{
+    cockpit_file = file;
+    FOREACH_COCKPIT(i) {
+        // forget the parsed file, it may have been rewritten
+        if ( (*i)->m_Doc )
+        {
+            xmlFreeDoc( (*i)->m_Doc );
+            (*i)->m_Doc = 0;
+        }
+        (*i)->ProcessCockpit();
+    }
+}
+
 typedef std::pair<tString, tValue::Callback<cCockpit>::cb_ptr> cbpair;
 static const cbpair cbarray[] = {
                                     cbpair(tString("player_rubber")       , &cCockpit::cb_CurrentRubber),

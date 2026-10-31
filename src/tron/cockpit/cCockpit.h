@@ -63,6 +63,10 @@ class cCockpit : public tXmlResource, public eCockpitPrototype {
 public:
     static std::list<cCockpit *> const &Cockpits() {return m_Cockpits;}
 
+    static tString const & File();               //!< the COCKPIT_FILE in use
+    static tString DefaultFile();                //!< the HUD that comes with the game
+    static void UseFile( tString const & file ); //!< switches COCKPIT_FILE and reloads it, even if it is unchanged
+
     enum cockpit_type {
         VIEWPORT_TOP,
         VIEWPORT_CYCLE,

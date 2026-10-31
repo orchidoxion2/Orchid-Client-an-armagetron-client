@@ -114,6 +114,7 @@ echo "src/tron/gSpotify.cpp" >> "$WIN/sources.txt"
 echo "src/tron/cockpit/cSpotify.cpp" >> "$WIN/sources.txt"
 echo "src/tron/cockpit/cLeaderboard.cpp" >> "$WIN/sources.txt"
 echo "src/tron/gPathFinder.cpp" >> "$WIN/sources.txt"
+echo "src/tron/gCockpitEditor.cpp" >> "$WIN/sources.txt"
 
 OBJECTS="$OBJ/orchid.res.o"
 : > "$WIN/compile.txt"
