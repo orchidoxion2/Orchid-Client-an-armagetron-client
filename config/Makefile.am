@@ -3,7 +3,7 @@
 # configuration location
 configdir=${aa_sysconfdir}
 
-nobase_config_DATA=default.cfg master.srv settings.cfg\
+nobase_config_DATA=default.cfg master.srv settings.cfg autoexec.cfg\
 	settings_dedicated.cfg aiplayers.cfg rc.config\
 	subcultures.srv\
 	settings_visual.cfg\
