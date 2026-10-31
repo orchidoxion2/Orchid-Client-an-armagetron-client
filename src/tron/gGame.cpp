@@ -2869,6 +2869,17 @@ void MainMenu(bool ingame){
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
 
+    gOwnCycleColors & own = gOwnCycleColors::Of( 0 );
+    uMenu ownColors("$customization_own_colors_text");
+    uMenuItemInt ownTrailB( &ownColors, "$customization_own_trail_b_text", "$customization_own_colors_values_help", own.trail[2], 0, 255, 5 );
+    uMenuItemInt ownTrailG( &ownColors, "$customization_own_trail_g_text", "$customization_own_colors_values_help", own.trail[1], 0, 255, 5 );
+    uMenuItemInt ownTrailR( &ownColors, "$customization_own_trail_r_text", "$customization_own_colors_values_help", own.trail[0], 0, 255, 5 );
+    uMenuItemInt ownCycleB( &ownColors, "$customization_own_cycle_b_text", "$customization_own_colors_values_help", own.cycle[2], 0, 255, 5 );
+    uMenuItemInt ownCycleG( &ownColors, "$customization_own_cycle_g_text", "$customization_own_colors_values_help", own.cycle[1], 0, 255, 5 );
+    uMenuItemInt ownCycleR( &ownColors, "$customization_own_cycle_r_text", "$customization_own_colors_values_help", own.cycle[0], 0, 255, 5 );
+    uMenuItemToggle ownEnabled( &ownColors, "$customization_own_colors_enabled_text", "$customization_own_colors_help", own.enabled );
+    uMenuItemSubmenu ownColors_sm( &customization, &ownColors, "$customization_own_colors_help" );
+
     class gColorOverflowItem: public uMenuItemToggle
     {
     public:
