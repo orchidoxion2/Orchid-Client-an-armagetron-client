@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Draws the artwork for the Orchi Tron box main menu into textures/menu/.
+# Draws the artwork for the Orchid Client box main menu into textures/menu/.
 # Flat, clean style matching the server list: dark slate, light glyphs, one accent color.
 # All images are 512x256 with the subject centered; the menu crops, never stretches.
 # Usage: python3 orchi/make_menu_images.py

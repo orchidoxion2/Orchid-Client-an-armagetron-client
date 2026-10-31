@@ -1,30 +1,35 @@
 #!/usr/bin/env bash
-# Builds the Orchi Tron client as a portable Linux package:
-#   build/orchi/orchi-tron-linux-x86_64.tar.gz
+# Builds Orchid Client as a portable Linux package:
+#   build/orchi/orchid-client-linux-x86_64.tar.gz
 set -e
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TITLE="Orchi Tron"
-APPNAME=orchi-tron
+TITLE="Orchid Client"
+APPNAME=orchid-client
 OUT="$ROOT/build/orchi"
 APPDIR="$OUT/appdir"
 
 test -f "$ROOT/configure" || (cd "$ROOT" && ./bootstrap.sh)
 
-# same configure arguments as the upstream release builds (docker/build/Makefile.am)
+# the title is set by configure: start over when it changes
+if test "$(cat "$OUT/build/title.stamp" 2>/dev/null)" != "$TITLE"; then
+    rm -rf "${OUT:?}/build"
+fi
 mkdir -p "$OUT/build"
 cd "$OUT/build"
+# same configure arguments as the upstream release builds (docker/build/Makefile.am)
 if ! test -f Makefile; then
     progname=armagetronad progtitle="$TITLE" "$ROOT/configure" --prefix=/usr \
         --disable-uninstall --disable-restoreold --enable-etc --enable-automakedefaults \
         --disable-useradd --disable-sysinstall --disable-initscripts --enable-curl --disable-tests
+    echo "$TITLE" > title.stamp
 fi
 make -j"$(nproc)"
 
 rm -rf "${APPDIR:?}"
 make install DESTDIR="$APPDIR"
 
-# Orchi Tron plays no music, don't ship it
+# Orchid Client plays no music, don't ship it
 rm -rf "${APPDIR:?}/usr/share/games/armagetronad/music"
 
 # upstream portable packaging: AppRun launcher, desktop file, icon, known libraries
