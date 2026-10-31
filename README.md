@@ -1,8 +1,17 @@
 # Orchid Client
 
-A modified [Armagetron Advanced](https://gitlab.com/armagetronad/armagetronad) client for Linux.
+A modified [Armagetron Advanced](https://gitlab.com/armagetronad/armagetronad) client for Linux and Windows.
 
-## Download and play
+## Windows
+
+1. Download [orchid-client-windows.zip](https://github.com/orchidoxion2/Orchid-Client-an-armagetron-client/raw/main/orchid-client-windows.zip).
+2. Right-click the zip and choose **Extract All**.
+3. Open the extracted `Orchid Client` folder and double-click **Orchid Client.exe**.
+
+If Windows shows "Windows protected your PC", click **More info**, then **Run anyway**.
+Your settings are saved in `%APPDATA%\Orchid Client`.
+
+## Linux
 
 1. Download [orchid-client-linux-x86_64.tar.gz](https://github.com/orchidoxion2/Orchid-Client-an-armagetron-client/raw/main/orchid-client-linux-x86_64.tar.gz).
 2. Unpack it:
