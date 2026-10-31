@@ -226,6 +226,8 @@ public:
     FTFont &GetFont(float height) {
         float & size_factor = sizeFactor_;
         int size = int(height/sr_lineHeight*size_factor*sr_screenHeight/2.+.5);
+        if(size < 1) size = 1;
+        if(size > 2000) size = 2000;
         FTFont *ret;
         if(count(size)) {
             ret = (*this)[size]; //already exists
@@ -236,7 +238,12 @@ public:
         // current font… this assumes the line height is linear to
         // the font size, which should be true unless the font uses
         // different glyphs for different sizes.
-        size_factor = size / ret->LineHeight();
+        // ...unless the font came out broken: a bad factor would stick for all later text
+        float const lineHeight = ret->LineHeight();
+        if(lineHeight > 0 && size >= 4) {
+            float const factor = size / lineHeight;
+            if(factor > .2 && factor < 5) size_factor = factor;
+        }
         return *ret;
     }
     void BBox(FTGL_STRING const &str, float height, tCoord where, float &l, float &b, float &r, float &t) {

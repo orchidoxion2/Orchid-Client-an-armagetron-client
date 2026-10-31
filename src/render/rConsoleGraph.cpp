@@ -210,7 +210,8 @@ void rConsole::Render(){
             // the look of the chat changed in the settings: draw it again
             tString look;
             look << sr_chatBackground << ' ' << sr_chatBackgroundColor[0] << ' ' << sr_chatBackgroundColor[1] << ' '
-                 << sr_chatBackgroundColor[2] << ' ' << sr_chatBackgroundAlpha << ' ' << sr_chatFont << ' ' << sr_chatLayer;
+                 << sr_chatBackgroundColor[2] << ' ' << sr_chatBackgroundAlpha << ' ' << sr_chatFont << ' ' << sr_chatLayer
+                 << ' ' << sr_screenWidth << 'x' << sr_screenHeight;
             static tString lastLook = look;
 
             if ( lastTop != currentTop || lastIn != currentIn || lastLook != look )

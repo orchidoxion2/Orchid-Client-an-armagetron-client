@@ -1623,7 +1623,15 @@ void sr_GetDrawableSize()
 #if SDL_VERSION_ATLEAST(2,0,1)
     if(sr_screen)
     {
-        SDL_GL_GetDrawableSize(sr_screen, &sr_screenWidth, &sr_screenHeight);
+        // a minimized window has no drawable area: keep the last real size,
+        // text layout and font sizes divide by it
+        int width = 0, height = 0;
+        SDL_GL_GetDrawableSize(sr_screen, &width, &height);
+        if(width > 0 && height > 0)
+        {
+            sr_screenWidth = width;
+            sr_screenHeight = height;
+        }
         return;
     }
 #endif
