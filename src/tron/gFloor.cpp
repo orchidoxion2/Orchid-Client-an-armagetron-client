@@ -158,8 +158,38 @@ public:
 
 static gFloor GFLOOR;
 
-// plain black menu background, only the logo is drawn
+// menu background picture: 16:9, stored squeezed into 2048x1024
+static rFileTexture sg_menuBackground( rTextureGroups::TEX_FONT, "textures/menu/background.jpg", 0, 0 );
+
+// draws the background picture filling the screen without stretching it, then the logo
 static void MenuBackground(){
+    sg_menuBackground.Select();
+    if ( sg_menuBackground.Loaded() )
+    {
+        REAL const screenAspect = sr_screenHeight > 0 ? REAL( sr_screenWidth ) / sr_screenHeight : REAL( 4./3. );
+        REAL const imageAspect = 16./9.;
+        REAL u0 = 0, u1 = 1, v0 = 0, v1 = 1;
+        if ( screenAspect < imageAspect )
+        {
+            u0 = ( 1 - screenAspect / imageAspect ) / 2;
+            u1 = 1 - u0;
+        }
+        else
+        {
+            v0 = ( 1 - imageAspect / screenAspect ) / 2;
+            v1 = 1 - v0;
+        }
+
+        Color( 1, 1, 1, 1 );
+        BeginQuads();
+        TexCoord( u0, v0 ); Vertex( -1,  1 );
+        TexCoord( u0, v1 ); Vertex( -1, -1 );
+        TexCoord( u1, v1 ); Vertex(  1, -1 );
+        TexCoord( u1, v0 ); Vertex(  1,  1 );
+        RenderEnd();
+        glDisable( GL_TEXTURE_2D );
+    }
+
     gLogo::Display();
 }
 

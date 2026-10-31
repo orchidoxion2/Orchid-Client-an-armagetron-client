@@ -3,6 +3,7 @@
 #   textures/title.jpg              title screen: the art centered on a wide 2:1 canvas
 #   textures/icon.png               window icon, 48 px
 #   desktop/icons/NxN/armagetronad.png  application icons
+#   textures/menu/background.jpg    menu background, the 16:9 art stored as 2048x1024
 # Usage: python3 orchi/make_branding.py
 import os
 import sys
@@ -22,6 +23,12 @@ def title():
     art = src.resize((round(src.width * height / src.height), height), Image.LANCZOS)
     canvas.paste(art, ((canvas.width - art.width) // 2, (canvas.height - art.height) // 2))
     canvas.save(os.path.join(ROOT, "textures", "title.jpg"), quality=93)
+
+
+def menu_background():
+    # power of two size for old graphics cards; the game draws it as 16:9 again
+    src = Image.open(os.path.join(ART, "menu_background_source.png")).convert("RGB")
+    src.resize((2048, 1024), Image.LANCZOS).save(os.path.join(ROOT, "textures", "menu", "background.jpg"), quality=92)
 
 
 def icon():
@@ -58,7 +65,8 @@ def icon():
 def main():
     title()
     icon()
-    print("wrote textures/title.jpg, textures/icon.png and desktop/icons/*/armagetronad.png")
+    menu_background()
+    print("wrote textures/title.jpg, textures/icon.png, textures/menu/background.jpg and desktop/icons/*/armagetronad.png")
 
 
 if __name__ == "__main__":

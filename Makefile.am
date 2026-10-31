@@ -110,7 +110,7 @@ nobase_texture_DATA=textures/cycle_body.png textures/cycle_wheel.png textures/di
 	textures/Armagetronad.ttf \
 	textures/Inter-Medium.otf textures/Inter-OFL.txt \
 	textures/menu/play.png textures/menu/player.png textures/menu/help.png \
-	textures/menu/settings.png textures/menu/exit.png
+	textures/menu/settings.png textures/menu/exit.png textures/menu/background.jpg
 
 nobase_sound_DATA=sound/1voicemale.ogg  sound/announcerGO.ogg  sound/expl.wav\
 	sound/2voicemale.ogg  sound/cycle_turn.wav   sound/grind.ogg\
