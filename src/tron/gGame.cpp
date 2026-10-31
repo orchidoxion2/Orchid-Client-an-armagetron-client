@@ -100,7 +100,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "gArena.h"
 #include "gSpotify.h"
 #include "eFloor.h"
-#include "gPathFinder.h"
 #include "cockpit/cLeaderboard.h"
 #include "gCockpitEditor.h"
 gArena Arena;
@@ -2859,9 +2858,6 @@ void MainMenu(bool ingame){
 
 
     uMenu experimental("$settings_experimental_text");
-    uMenuItemToggle pathFinder
-    (&experimental,"$pref_pathfinder_text",
-     "$pref_pathfinder_help",gPathFinder::Enabled());
     uMenuItemToggle trailAgeLine
     (&experimental,"$pref_trail_age_text",
      "$pref_trail_age_help",sg_cycleTrailAgeLine);

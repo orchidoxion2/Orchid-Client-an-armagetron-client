@@ -48,7 +48,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "eFloor.h"
 #include "gSparks.h"
 #include "gExplosion.h"
-#include "gPathFinder.h"
 #include "gWall.h"
 #include "nKrawall.h"
 #include "gAIBase.h"
@@ -4391,13 +4390,6 @@ void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * 
                 if ( run->BegPos() + EPS < run->EndPos() )
                     run->RenderAgeLine();
         glLineWidth( 1 );
-        if ( rTextureGroups::TextureMode[rTextureGroups::TEX_WALL] != 0 )
-            glEnable( GL_TEXTURE_2D );
-    }
-
-    if ( gPathFinder::Active() )
-    {
-        gPathFinder::Render( cycle );
         if ( rTextureGroups::TextureMode[rTextureGroups::TEX_WALL] != 0 )
             glEnable( GL_TEXTURE_2D );
     }
