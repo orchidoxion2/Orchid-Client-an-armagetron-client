@@ -98,6 +98,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "nSocket.h"
 
 #include "gArena.h"
+#include "gSpotify.h"
 gArena Arena;
 
 static gTutorialBase * sg_tutorial = NULL;
@@ -2398,6 +2399,38 @@ static uMenuItemFunction sg_docMenuItem
 
 #endif
 
+class gSpotifyAccountItem: public uMenuItemAction
+{
+public:
+    explicit gSpotifyAccountItem( uMenu * M )
+        : uMenuItemAction( M, "$spotify_account_text", "$spotify_account_help" ){}
+
+    void Enter() override
+    {
+        if ( gSpotify::LoggedIn() )
+            gSpotify::Logout();
+        else
+        {
+            gSpotify::Enabled() = true;
+            gSpotify::Login();
+        }
+    }
+
+    tString GetPanelLabel() override
+    {
+        tString status = gSpotify::Status();
+        if ( gSpotify::LoggedIn() )
+            return tString( "Log out of Spotify" );
+        if ( status == "Not logged in" )
+            return tString( "Log in to Spotify" );
+        if ( status.StartsWith( "Waiting" ) )
+            return tString( "Waiting for the browser login (click to open it again)" );
+        tString label( status );
+        label << " - click to try again";
+        return label;
+    }
+};
+
 class gSettingsPanelItem: public uMenuItemSubmenu
 {
 public:
@@ -2816,6 +2849,19 @@ void MainMenu(bool ingame){
     (&misc,"$misc_moviepack_text",
      "$misc_moviepack_help",sg_moviepackUse);
 
+
+    uMenu spotify("$settings_spotify_text");
+    gSpotifyAccountItem spotifyAccount( &spotify );
+    uMenuItemToggle spotifyLyrics
+    (&spotify,"$spotify_lyrics_text",
+     "$spotify_lyrics_help",gSpotify::ShowLyrics());
+    uMenuItemToggle spotifyEnabled
+    (&spotify,"$spotify_enabled_text",
+     "$spotify_enabled_help",gSpotify::Enabled());
+
+    uMenuItemSubmenu spotify_sm
+    (&Settings,&spotify,
+     "$settings_spotify_help");
 
     uMenuItemSubmenu misc_sm
     (&Settings,&misc,

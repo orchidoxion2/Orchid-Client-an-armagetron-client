@@ -110,6 +110,7 @@ for name, _, body in re.findall(r'<Unit filename="([^"]+)"\s*(/>|>(.*?)</Unit>)'
     if 'compile="0"' not in (body or "") and re.search(r"\.(cpp|cc|c)$", name):
         print(name.replace("../../", "", 1))
 PYEOF
+echo "src/tron/gSpotify.cpp" >> "$WIN/sources.txt"
 
 OBJECTS="$OBJ/orchid.res.o"
 : > "$WIN/compile.txt"
@@ -124,7 +125,7 @@ done
 echo "compiling $(wc -l < "$WIN/compile.txt") files"
 xargs -P"$JOBS" -I{} sh -c {} < "$WIN/compile.txt"
 
-$CXX -mwindows ${STRIP--s} -static-libgcc -static-libstdc++ -o "$WIN/OrchidClient.exe" $OBJECTS \
+$CXX -mwindows ${STRIP--s} -static -o "$WIN/OrchidClient.exe" $OBJECTS \
     "$WIN/ftgl/libftgl.a" "$LIBS/FTGL/win32/freetype/objs/libfreetype248.a" \
     "$WIN/protobuf-win/src/.libs/libprotobuf.a" \
     "$LIBS/libxml2/lib/libxml2.lib" -lmingw32 \
@@ -132,7 +133,7 @@ $CXX -mwindows ${STRIP--s} -static-libgcc -static-libstdc++ -o "$WIN/OrchidClien
     "$LIBS/SDL2_image/i686-w64-mingw32/lib/libSDL2_image.dll.a" \
     "$LIBS/SDL2_mixer/i686-w64-mingw32/lib/libSDL2_mixer.dll.a" \
     "$LIBS/SDL2_image/i686-w64-mingw32/bin/libpng16-16.dll" \
-    -lshell32 -lws2_32 -lglu32 -lopengl32 -lwinmm -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic
+    -lshell32 -lws2_32 -lwinhttp -lglu32 -lopengl32 -lwinmm
 
 rm -rf "${DIST:?}"
 mkdir -p "$DIST"
@@ -140,13 +141,22 @@ cp "$WIN/OrchidClient.exe" "$DIST/Orchid Client.exe"
 cp "$LIBS"/SDL2/i686-w64-mingw32/bin/*.dll "$LIBS"/SDL2_image/i686-w64-mingw32/bin/*.dll \
    "$LIBS"/SDL2_mixer/i686-w64-mingw32/bin/*.dll "$LIBS/libxml2/lib/libxml2.dll" "$LIBS/iconv/lib/iconv.dll" "$DIST/"
 INSTALLED="$ROOT/build/orchi/orchid-client"
-test -d "$INSTALLED" || "$ROOT/orchi/package.sh"
+"$ROOT/orchi/package.sh" > "$WIN/package.log"
 for d in textures sound models resource language; do
     cp -r "$INSTALLED/usr/share/games/armagetronad/$d" "$DIST/$d"
 done
 cp -r "$INSTALLED/usr/etc/games/armagetronad" "$DIST/config"
 find "$DIST" \( -name '*.in' -o -name 'AGENTS.md' \) -delete
 cp "$ROOT/COPYING" "$DIST/COPYING.txt"
+
+SYSTEM_DLLS='^(advapi32|gdi32|glu32|imm32|kernel32|oleaut32|opengl32|shell32|user32|version|winhttp|winmm|ws2_32|wsock32|msvcrt|ole32)\.dll$'
+missing=$(cd "$DIST" && for f in *.exe *.dll; do i686-w64-mingw32-objdump -p "$f" | awk '/DLL Name/{print $3}'; done | sort -u | while read -r dll; do
+    ls | grep -qix "$dll" || echo "$dll" | grep -qiE "$SYSTEM_DLLS" || echo "$dll"
+done)
+if test -n "$missing"; then
+    echo "missing DLLs: $missing" >&2
+    exit 1
+fi
 
 cd "$WIN"
 rm -f orchid-client-windows.zip

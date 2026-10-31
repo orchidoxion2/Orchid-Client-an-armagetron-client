@@ -71,6 +71,38 @@
                 </Table>
             </Face>
         </Label>
+        <Label camera="all">
+            <DataSet id="track">
+                <AtomicData source="spotify_track" />
+            </DataSet>
+            <Position x="0.965" y="0.905" />
+            <Size height="0.04" width="0.01" />
+            <Align value="right" />
+            <Caption location="off"><Text value="Spotify" /></Caption>
+            <Face>
+                <Table>
+                    <Row>
+                        <Cell><GameData data="track" /></Cell>
+                    </Row>
+                </Table>
+            </Face>
+        </Label>
+        <Label camera="all">
+            <DataSet id="lyric">
+                <AtomicData source="spotify_lyric" />
+            </DataSet>
+            <Position x="0.965" y="0.85" />
+            <Size height="0.046" width="0.01" />
+            <Align value="right" />
+            <Caption location="off"><Text value="Lyrics" /></Caption>
+            <Face>
+                <Table>
+                    <Row>
+                        <Cell><GameData data="lyric" /></Cell>
+                    </Row>
+                </Table>
+            </Face>
+        </Label>
 
         <Label camera="all">
             <DataSet id="speed">

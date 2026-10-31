@@ -42,6 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "ePlayer.h"
 #include "gCycle.h"
 #include "gGame.h"
+#include "gSpotify.h"
 #include "eTimer.h"
 #include "eTeam.h"
 #include "eCamera.h"
@@ -108,7 +109,9 @@ static const cbpair cbarray[] = {
                                     cbpair(tString("current_pos_y")       , &cCockpit::cb_CurrentPosY),
                                     cbpair(tString("current_score_colored")  , &cCockpit::cb_CurrentScoreColored),
                                     cbpair(tString("top_other_score_colored"), &cCockpit::cb_TopOtherScoreColored),
-                                    cbpair(tString("round_text")          , &cCockpit::cb_RoundText)
+                                    cbpair(tString("round_text")          , &cCockpit::cb_RoundText),
+                                    cbpair(tString("spotify_track")       , &cCockpit::cb_SpotifyTrack),
+                                    cbpair(tString("spotify_lyric")       , &cCockpit::cb_SpotifyLyric)
                                 };
 std::map<tString, tValue::Callback<cCockpit>::cb_ptr> const stc_callbacks(cbarray, cbarray+sizeof(cbarray)/sizeof(cbpair));
 
@@ -353,6 +356,14 @@ tValue::BasePtr cCockpit::cb_TopOtherScoreColored(void){
 
 tValue::BasePtr cCockpit::cb_RoundText(void){
     return tValue::BasePtr(new tValue::String(sg_RoundText()));
+}
+
+tValue::BasePtr cCockpit::cb_SpotifyTrack(void){
+    return tValue::BasePtr(new tValue::String(gSpotify::Track()));
+}
+
+tValue::BasePtr cCockpit::cb_SpotifyLyric(void){
+    return tValue::BasePtr(new tValue::String(gSpotify::Lyric()));
 }
 
 tValue::BasePtr cCockpit::cb_CurrentScoreTeam(void){

@@ -176,6 +176,8 @@ public:
     tValue::BasePtr cb_CurrentScoreColored(void);
     tValue::BasePtr cb_TopOtherScoreColored(void);
     tValue::BasePtr cb_RoundText(void);
+    tValue::BasePtr cb_SpotifyTrack(void);
+    tValue::BasePtr cb_SpotifyLyric(void);
     tValue::BasePtr cb_CurrentPosX(void);		    //!< Gets the position of the cycle as x- coordinate
     tValue::BasePtr cb_CurrentPosY(void);		    //!< Gets the position of the cycle as y- coordinate
 
