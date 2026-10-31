@@ -137,12 +137,12 @@ void rConsole::Render(){
     }
     else
     {
-        // show big font in its native pixel size
-        rCHEIGHT_CON=31*2.0/H;
-        rCWIDTH_CON=15*2.0/W;
+        // 20 pixel font, a bit bigger than the HUD texts
+        rCHEIGHT_CON=20*2.0/H;
+        rCWIDTH_CON=10*2.0/W;
 
         // but don't make it more than MAX_ROWS of text rows for the whole screen, more may be too small for hires small screens
-        constexpr auto MAX_ROWS = 47;
+        constexpr auto MAX_ROWS = 56;
         if(columns == 0 && rCHEIGHT_CON * MAX_ROWS < 2)
         {
             auto clamped_CHEIGHT = 2.0f/MAX_ROWS;

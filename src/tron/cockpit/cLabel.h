@@ -46,6 +46,8 @@ public:
 
     void Render(); //!< Renders the label and the caption
     bool Process(tXmlParser::node cur); //!< Passes on to all Process() functions of the base classes and calls Base::DisplayError() on failure
+private:
+    int m_align = -1; //!< the position is the -1: left edge, 0: center, 1: right edge of the label
 };
 
 }

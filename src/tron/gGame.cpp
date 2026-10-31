@@ -2616,6 +2616,22 @@ private:
 };
 #endif
 
+tString sg_RoundText()
+{
+    tString text;
+    if ( !sg_currentGame || !sg_currentSettings || sg_tutorial || sn_GetNetState() == nCLIENT )
+        return text;
+    if ( se_warmup.IsWarmupMode() )
+    {
+        text << "WARMUP";
+        return text;
+    }
+    int const limit = sg_currentSettings->limitRounds;
+    if ( limit > 0 )
+        text << "ROUND " << std::min( sg_currentGame->RoundsPlayed() + 1, limit ) << "/" << limit;
+    return text;
+}
+
 void MainMenu(bool ingame){
 #ifndef DEDICATED
     //	update_settings();

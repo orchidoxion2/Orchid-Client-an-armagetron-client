@@ -71,7 +71,9 @@ public:
 
 private:
     cockpit_type m_Type;
+    bool m_ScreenCoordinates = false; //!< widgets use -1..1 of the viewport in both directions, no square space
 public:
+    bool ScreenCoordinates() const { return m_ScreenCoordinates; } //!< see m_ScreenCoordinates
 
     enum cameras {
         custom        = 0001,
@@ -170,7 +172,10 @@ public:
     tValue::BasePtr cb_TimeToImpactLeft(void);             //!< Gets the time it will take the cycle to reach the next wall left of it
     tValue::BasePtr cb_CurrentSong(void);		    //!< Gets the file name of the song currently played. May be swiched to the title embedded in the music file later
     tValue::BasePtr cb_CurrentName(void);		    //!< Gets the name of the player that is being watched
-    tValue::BasePtr cb_CurrentColoredName(void);		    //!< Gets the colored name of the player that is being watched
+    tValue::BasePtr cb_CurrentColoredName(void);
+    tValue::BasePtr cb_CurrentScoreColored(void);     //!< Gets the player's score, in the player's color
+    tValue::BasePtr cb_TopOtherScoreColored(void);    //!< Gets the best score of someone else, in that player's color
+    tValue::BasePtr cb_RoundText(void);               //!< Gets "ROUND x/y" where known		    //!< Gets the colored name of the player that is being watched
     tValue::BasePtr cb_CurrentPosX(void);		    //!< Gets the position of the cycle as x- coordinate
     tValue::BasePtr cb_CurrentPosY(void);		    //!< Gets the position of the cycle as y- coordinate
 

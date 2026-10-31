@@ -99,6 +99,8 @@ public:
     gGame();
     virtual ~gGame();
 
+    int RoundsPlayed() const { return rounds; }
+
     //! creates a netobject form sync data
     gGame( Game::GameSync const &, nSenderInfo const & );
     //! reads sync data, returns false if sync was old or otherwise invalid
@@ -239,6 +241,9 @@ public:
 };
 
 extern gGameSettings* sg_currentSettings;
+
+//! "ROUND 3/10" or "WARMUP" for the HUD; empty when unknown (network clients don't get the round counter)
+tString sg_RoundText();
 
 void rotate();
 // the 'start over' menu is defined in gArmagetron.cpp and needs to be injected

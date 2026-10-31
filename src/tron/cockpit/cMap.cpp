@@ -257,7 +257,8 @@ void Map::Render() {
     DrawMap(true, true,
             5.5, 0.,
             m_position.x-m_size.x, m_position.y-m_size.y, 2.*m_size.x, 2.*m_size.y,
-            sr_screenWidth*m_size.x, sr_screenWidth*m_size.y, .5, .5);
+            sr_screenWidth*m_size.x,
+            ( m_Cockpit && m_Cockpit->ScreenCoordinates() ? sr_screenHeight : sr_screenWidth )*m_size.y, .5, .5);
 }
 void Map::DrawMap(bool rimWalls, bool cycleWalls,
                   double cycleSize, double border,

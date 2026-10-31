@@ -35,6 +35,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 namespace cWidget {
 
 bool Label::Process(tXmlParser::node cur) {
+    if (cur.IsOfType("Align")) {
+        tString value = cur.GetProp("value");
+        m_align = value == "center" ? 0 : ( value == "right" ? 1 : -1 );
+        return true;
+    }
     if (
         WithTable       ::Process(cur) ||
         WithCoordinates ::Process(cur) ||
@@ -87,11 +92,18 @@ void Label::Render()
         c<<m_caption;
     }
 
+    // horizontal alignment of the whole table
+    float left = m_position.x;
+    if (m_align >= 0) {
+        float width = std::accumulate(coloumns.begin(), coloumns.end(), float()) + (maxlen > 0 ? (maxlen - 1)*m_size.x : 0);
+        left -= m_align == 0 ? width/2 : width;
+    }
+
     tCoord pos(0.,m_position.y);
     //now displaying the results
     {
         for(std::deque<std::deque<tString> >::iterator i(contents.begin()); i != contents.end(); ++i) {
-            pos.x = m_position.x;
+            pos.x = left;
             std::deque<float>::iterator m(coloumns.begin());
             for(std::deque<tString>::iterator j(i->begin()); j != i->end(); ++j, ++m) {
                 rTextField c(pos.x,pos.y,m_size.y, sr_fontCockpit);

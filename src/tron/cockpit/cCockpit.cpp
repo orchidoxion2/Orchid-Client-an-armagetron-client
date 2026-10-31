@@ -41,6 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "ePlayer.h"
 #include "gCycle.h"
+#include "gGame.h"
 #include "eTimer.h"
 #include "eTeam.h"
 #include "eCamera.h"
@@ -104,7 +105,10 @@ static const cbpair cbarray[] = {
                                     cbpair(tString("current_name")        , &cCockpit::cb_CurrentName),
                                     cbpair(tString("current_colored_name"), &cCockpit::cb_CurrentColoredName),
                                     cbpair(tString("current_pos_x")       , &cCockpit::cb_CurrentPosX),
-                                    cbpair(tString("current_pos_y")       , &cCockpit::cb_CurrentPosY)
+                                    cbpair(tString("current_pos_y")       , &cCockpit::cb_CurrentPosY),
+                                    cbpair(tString("current_score_colored")  , &cCockpit::cb_CurrentScoreColored),
+                                    cbpair(tString("top_other_score_colored"), &cCockpit::cb_TopOtherScoreColored),
+                                    cbpair(tString("round_text")          , &cCockpit::cb_RoundText)
                                 };
 std::map<tString, tValue::Callback<cCockpit>::cb_ptr> const stc_callbacks(cbarray, cbarray+sizeof(cbarray)/sizeof(cbpair));
 
@@ -315,6 +319,43 @@ tValue::BasePtr cCockpit::cb_TopOtherScore(void){
     return tValue::BasePtr(new tValue::Int(top));
 }
 
+//! the player's color as a color code, for text in that color
+static tString cc_ColorCode( ePlayerNetID const * player )
+{
+    REAL r = .6, g = .6, b = .6;
+    if ( player )
+        player->Color( r, g, b );
+    tColoredString code;
+    code << tColoredString::ColorString( r, g, b );
+    return tString( code );
+}
+
+tValue::BasePtr cCockpit::cb_CurrentScoreColored(void){
+    if(m_Type == VIEWPORT_TOP) return tValue::BasePtr(new tValue::Base());
+    ePlayerNetID *player = GetCurrentOrFocusedPlayer();
+    tString ret = cc_ColorCode( player );
+    ret << ( player ? player->TotalScore() : 0 );
+    return tValue::BasePtr(new tValue::String(ret));
+}
+
+tValue::BasePtr cCockpit::cb_TopOtherScoreColored(void){
+    ePlayerNetID *curr = GetCurrentOrFocusedPlayer();
+    ePlayerNetID *best = 0;
+    for(int i = se_PlayerNetIDs.Len() - 1;i >= 0; i--){
+        ePlayerNetID *p = se_PlayerNetIDs(i);
+        if(p != curr && ( !best || p->Score() > best->Score() ) ){
+            best = p;
+        }
+    }
+    tString ret = cc_ColorCode( best );
+    ret << ( best ? best->Score() : 0 );
+    return tValue::BasePtr(new tValue::String(ret));
+}
+
+tValue::BasePtr cCockpit::cb_RoundText(void){
+    return tValue::BasePtr(new tValue::String(sg_RoundText()));
+}
+
 tValue::BasePtr cCockpit::cb_CurrentScoreTeam(void){
     if(m_Type == VIEWPORT_TOP) return tValue::BasePtr(new tValue::Base());
     int val = 0;
@@ -447,6 +488,7 @@ void cCockpit::ProcessCockpit(void) {
         return;
     }
     if (cur.IsOfType("Cockpit")) {
+        m_ScreenCoordinates = cur.GetProp("coordinates") == "screen";
         ProcessWidgets(cur);
         if(sr_screenWidth != 0) Readjust();
         return;
@@ -828,16 +870,21 @@ static void display_cockpit_lucifer() {
         rViewport *port = viewportConfiguration->Port( viewport );
         tCoord dims = port->GetDimensions();
 
-        // select the corrected viewport
-        port->EqualAspectBottom().Select();
-
         cCockpit *player_cockpit;
         if(!(player_cockpit = dynamic_cast<cCockpit *>(player->cockpit.get()))) {
             player_cockpit = new cCockpit(cCockpit::VIEWPORT_ALL);
             player->cockpit = player_cockpit;
-            float factor = 4./3. / (static_cast<float>(sr_screenWidth)/static_cast<float>(sr_screenHeight));
-            player_cockpit->Readjust(factor * dims.y / dims.x);
+            if(!player_cockpit->ScreenCoordinates()) {
+                float factor = 4./3. / (static_cast<float>(sr_screenWidth)/static_cast<float>(sr_screenHeight));
+                player_cockpit->Readjust(factor * dims.y / dims.x);
+            }
         }
+
+        // select the viewport: as it is, or the classic square one, corrected for the aspect ratio
+        if(player_cockpit->ScreenCoordinates())
+            port->Select();
+        else
+            port->EqualAspectBottom().Select();
 
         player_cockpit->SetPlayer(player);
         // delegate
