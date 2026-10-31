@@ -2027,6 +2027,16 @@ customization_own_trail_r_text	Trail Red:
 customization_own_trail_g_text	Trail Green:
 customization_own_trail_b_text	Trail Blue:
 
+customization_name_gradient_text	Name Gradient
+customization_name_gradient_help	Colors your player name with a gradient, letter by letter. Your name in Player Setup stays as it is. Servers can remove name colors, and the name length limit counts the color codes too.
+customization_name_gradient_enabled_text	Name Gradient:
+customization_name_gradient_colors_text	Colors:
+customization_name_gradient_colors_help	Two or more colors as six hex digits, separated by spaces: start color, optional stops in between, end color. Example: ff4fa3 7a5cff
+customization_name_gradient_preview_text	Preview:
+customization_name_gradient_preview_help	How your name looks with the gradient.
+name_gradient_help			Color the player name with a gradient
+name_gradient_colors_help		The gradient colors for the player name: six hex digits each, separated by spaces
+
 settings_experimental_text	Experimental
 settings_experimental_help	Features that are still being tried out.
 

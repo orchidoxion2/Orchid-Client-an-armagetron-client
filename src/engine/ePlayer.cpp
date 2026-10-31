@@ -44,6 +44,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <iostream>
 #include <deque>
 #include <algorithm>
+#include <cstdio>
+#include <vector>
 #include <random>
 #include "rRender.h"
 #include "rFont.h"
@@ -1322,6 +1324,20 @@ ePlayer::ePlayer():cockpit(0){
                                          wobbleIncam));
 
     confname.Clear();
+    confname << "NAME_GRADIENT_"<< id+1;
+    nameGradient=false;
+    StoreConfitem(tNEW(tConfItem<bool>) (confname,
+                                         "$name_gradient_help",
+                                         nameGradient));
+
+    confname.Clear();
+    confname << "NAME_GRADIENT_COLORS_"<< id+1;
+    nameGradientColors="ff4fa3 7a5cff";
+    StoreConfitem(tNEW(tConfItemLine) (confname,
+                                       "$name_gradient_colors_help",
+                                       nameGradientColors));
+
+    confname.Clear();
     confname << "COLOR_B_"<< id+1;
     StoreConfitem(tNEW(tConfItem<int>) (confname,
                                         "$color_b_help",
@@ -1355,6 +1371,83 @@ ePlayer::ePlayer():cockpit(0){
     rgb[2]=int(B[cid]*15);
 
     cam=NULL;
+}
+
+tString ePlayer::GradientName( tString const & name, tString const & stops )
+{
+    // the stops: six hex digits each, optionally starting with # or 0x
+    std::vector< tColor > colors;
+    tString token;
+    tString const list = stops + " ";
+    for ( size_t i = 0; i < list.size(); ++i )
+    {
+        char const c = list[i];
+        if ( c != ' ' && c != ',' && c != ';' )
+        {
+            token += c;
+            continue;
+        }
+        if ( token.StartsWith( "0x" ) || token.StartsWith( "0X" ) )
+            token = tString( token.substr( 2 ) );
+        else if ( token.StartsWith( "#" ) )
+            token = tString( token.substr( 1 ) );
+        if ( token.size() == 6 && token.find_first_not_of( "0123456789abcdefABCDEF" ) == std::string::npos )
+        {
+            long const value = strtol( token.c_str(), NULL, 16 );
+            colors.push_back( tColor( ( ( value >> 16 ) & 255 ) / 255.0, ( ( value >> 8 ) & 255 ) / 255.0, ( value & 255 ) / 255.0 ) );
+        }
+        token.Clear();
+    }
+
+    tString const plain = tColoredString::RemoveColors( name, false );
+    if ( colors.empty() )
+        return plain;
+
+    // the visible characters, multi byte ones kept together
+    std::vector< tString > characters;
+    for ( size_t i = 0; i < plain.size(); )
+    {
+        size_t length = 1;
+        while ( i + length < plain.size() && ( static_cast< unsigned char >( plain[i + length] ) & 0xC0 ) == 0x80 )
+            ++length;
+        characters.push_back( tString( plain.substr( i, length ) ) );
+        i += length;
+    }
+
+    tString result, lastCode;
+    size_t const count = characters.size();
+    for ( size_t i = 0; i < count; ++i )
+    {
+        if ( characters[i] != " " )
+        {
+            REAL const t = count > 1 ? REAL( i ) / ( count - 1 ) : 0;
+            REAL const position = t * ( colors.size() - 1 );
+            size_t const segment = std::min( size_t( position ), colors.size() > 1 ? colors.size() - 2 : 0 );
+            REAL const f = colors.size() > 1 ? position - segment : 0;
+            tColor const & a = colors[ segment ];
+            tColor const & b = colors[ std::min( segment + 1, colors.size() - 1 ) ];
+            char code[16];
+            snprintf( code, sizeof( code ), "0x%02x%02x%02x",
+                      int( ( a.r_ + ( b.r_ - a.r_ ) * f ) * 255 + .5 ),
+                      int( ( a.g_ + ( b.g_ - a.g_ ) * f ) * 255 + .5 ),
+                      int( ( a.b_ + ( b.b_ - a.b_ ) * f ) * 255 + .5 ) );
+            // no new code where the color stays the same
+            if ( lastCode != code )
+            {
+                result << code;
+                lastCode = code;
+            }
+        }
+        result << characters[i];
+    }
+    return result;
+}
+
+tString ePlayer::NetName() const
+{
+    if ( !nameGradient )
+        return tString( name );
+    return GradientName( tString( name ), nameGradientColors );
 }
 
 ePlayer::~ePlayer(){
@@ -5094,7 +5187,7 @@ ePlayerNetID::ePlayerNetID(int p):nNetObject(),listID(-1), teamListID(-1), timeC
     if (p>=0){
         ePlayer *P = ePlayer::PlayerConfig(p);
         if (P){
-            SetName( P->Name() );
+            SetName( P->NetName() );
             teamname = P->Teamname();
             color.r_=   P->rgb[0];
             color.g_=   P->rgb[1];
@@ -7634,14 +7727,14 @@ void ePlayerNetID::Update(){
                 p->stealth_ = local_p->stealth;
 
                 // update name
-                tString newName( ePlayer::PlayerConfig(i)->Name() );
+                tString newName( ePlayer::PlayerConfig(i)->NetName() );
 
                 if ( ::sn_GetNetState() != nCLIENT || newName != p->nameFromClient_ )
                 {
                     p->RequestSync();
                 }
 
-                p->SetName( local_p->Name() );
+                p->SetName( local_p->NetName() );
             }
         }
 

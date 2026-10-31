@@ -130,6 +130,13 @@ public:
     virtual ~ePlayer();
 
     virtual const char *Name() const{return name;}
+
+    bool nameGradient;             //!< NAME_GRADIENT_<n>: color the name with a gradient
+    tString nameGradientColors;    //!< NAME_GRADIENT_COLORS_<n>: the gradient stops, like "ff4fa3 7a5cff"
+    tString NetName() const;       //!< the name as sent to the server, with the gradient if it is on
+
+    //! colors the visible characters of a name with a gradient through the given stops
+    static tString GradientName( tString const & name, tString const & stops );
     virtual const char *Teamname() const{return teamname;}
 
     virtual bool Act(uAction *act,REAL x);

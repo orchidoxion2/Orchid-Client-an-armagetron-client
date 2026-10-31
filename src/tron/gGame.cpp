@@ -2869,6 +2869,36 @@ void MainMenu(bool ingame){
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
 
+    class gNameGradientPreview: public uMenuItem
+    {
+    public:
+        explicit gNameGradientPreview( uMenu * menu )
+            : uMenuItem( menu, "$customization_name_gradient_preview_help" ){}
+        tString Preview()
+        {
+            ePlayer * player = ePlayer::PlayerConfig( 0 );
+            return player ? ePlayer::GradientName( tString( player->Name() ), player->nameGradientColors ) : tString();
+        }
+        void Render( REAL x, REAL y, REAL alpha, bool selected ) override
+        {
+            tString text( tOutput( "$customization_name_gradient_preview_text" ) );
+            text << " " << Preview();
+            DisplayText( x, y, text, selected, alpha );
+        }
+        PanelKind GetPanelKind() override { return PANEL_CHOICE; }
+        tString GetPanelLabel() override { return tString( tOutput( "$customization_name_gradient_preview_text" ) ); }
+        tString GetPanelValue() override { return Preview(); }
+    };
+
+    ePlayer * firstPlayer = ePlayer::PlayerConfig( 0 );
+    uMenu nameGradient("$customization_name_gradient_text");
+    gNameGradientPreview nameGradientPreview( &nameGradient );
+    uMenuItemString nameGradientColors( &nameGradient, "$customization_name_gradient_colors_text",
+                                        "$customization_name_gradient_colors_help", firstPlayer->nameGradientColors, 200 );
+    uMenuItemToggle nameGradientEnabled( &nameGradient, "$customization_name_gradient_enabled_text",
+                                         "$customization_name_gradient_help", firstPlayer->nameGradient );
+    uMenuItemSubmenu nameGradient_sm( &customization, &nameGradient, "$customization_name_gradient_help" );
+
     gOwnCycleColors & own = gOwnCycleColors::Of( 0 );
     uMenu ownColors("$customization_own_colors_text");
     uMenuItemInt ownTrailB( &ownColors, "$customization_own_trail_b_text", "$customization_own_colors_values_help", own.trail[2], 0, 255, 5 );
