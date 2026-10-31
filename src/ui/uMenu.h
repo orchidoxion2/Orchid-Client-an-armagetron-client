@@ -183,6 +183,9 @@ public:
 
     static void BeginPanel( uMenu * backdrop );
     static void EndPanel();
+
+    //! turns typing on or off for text boxes that are not menu string items
+    static void SetTextInput( bool on );
 protected:
     //! handles a key press
     virtual void HandleEvent( SDL_Event event );

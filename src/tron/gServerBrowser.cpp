@@ -1423,7 +1423,10 @@ protected:
             if ( event.button.button == SDL_BUTTON_LEFT )
                 Click();
             else if ( event.button.button == SDL_BUTTON_RIGHT )
+            {
+                SetSearching( false );
                 Exit();
+            }
 #if !SDL_VERSION_ATLEAST(2,0,0)
             else if ( event.button.button == SDL_BUTTON_WHEELUP )
                 Scroll( -3 );
@@ -1467,6 +1470,12 @@ private:
     bool hideEmpty_ = false, hideFull_ = false, rankedOnly_ = false;
     tString search_;
     bool searching_ = false, ignoreSlash_ = false;
+    void SetSearching( bool on )
+    {
+        if ( on != searching_ )
+            SetTextInput( on );
+        searching_ = on;
+    }
     int scroll_ = 0;
     nServerInfo * selected_ = nullptr;
     double lastClickTime_ = 0;
@@ -1602,20 +1611,20 @@ private:
                 return;
             }
         }
-        searching_ = false;
+        SetSearching( false );
     }
 
     void Do( gSLAction action, int param )
     {
         if ( action != ACT_SEARCH )
-            searching_ = false;
+            SetSearching( false );
         switch ( action )
         {
         case ACT_PROFILE:
             sg_PlayerMenu( 0 );
             break;
         case ACT_SEARCH:
-            searching_ = true;
+            SetSearching( true );
             break;
         case ACT_MODE:
             mode_ = param;
@@ -1717,11 +1726,11 @@ private:
                 return true;
             case SDLK_ESCAPE:
                 search_.clear();
-                searching_ = false;
+                SetSearching( false );
                 return true;
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
-                searching_ = false;
+                SetSearching( false );
                 return true;
             case SDLK_UP:
             case SDLK_DOWN:
@@ -1742,7 +1751,7 @@ private:
         case SDLK_s:        Join( true ); return true;
         case SDLK_r:        Refresh(); return true;
         case SDLK_SLASH:
-            searching_ = true;
+            SetSearching( true );
             ignoreSlash_ = true;
             return true;
         case SDLK_ESCAPE:

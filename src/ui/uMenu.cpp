@@ -177,6 +177,25 @@ static REAL     su_panelMouseX = -10, su_panelMouseY = -10;
 static REAL     su_panelAnimTime = 0;
 static double   su_panelAnimLast = -1;
 
+void uMenu::SetTextInput( bool on )
+{
+#ifndef DEDICATED
+#if SDL_VERSION_ATLEAST(2,0,0)
+    if ( on )
+        SDL_StartTextInput();
+    else
+        SDL_StopTextInput();
+#endif
+#endif
+}
+
+static void su_SetPanelSearchFocus( bool focus )
+{
+    if ( focus != su_panelSearchFocus )
+        uMenu::SetTextInput( focus );
+    su_panelSearchFocus = focus;
+}
+
 void uMenu::BeginPanel( uMenu * backdrop )
 {
     su_panelActive = true;
@@ -186,7 +205,7 @@ void uMenu::BeginPanel( uMenu * backdrop )
     su_panelSection = su_panelPending = -1;
     su_panelClose = false;
     su_panelSearch.Clear();
-    su_panelSearchFocus = false;
+    su_SetPanelSearchFocus( false );
     su_panelAnimTime = 0;
     su_panelAnimLast = -1;
 }
@@ -208,7 +227,7 @@ public:
         if ( su_panelDepth++ == 0 )
             su_panelRoot = menu;
         su_panelSearch.Clear();
-        su_panelSearchFocus = false;
+        su_SetPanelSearchFocus( false );
     }
     ~uPanelLevel()
     {
@@ -217,7 +236,7 @@ public:
         if ( --su_panelDepth == 0 )
             su_panelRoot = nullptr;
         su_panelSearch.Clear();
-        su_panelSearchFocus = false;
+        su_SetPanelSearchFocus( false );
     }
 private:
     bool active_;
@@ -1140,11 +1159,11 @@ bool uMenu::PanelEvent( SDL_Event & event )
                 break;
             case SDLK_ESCAPE:
                 su_panelSearch.Clear();
-                su_panelSearchFocus = false;
+                su_SetPanelSearchFocus( false );
                 break;
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
-                su_panelSearchFocus = false;
+                su_SetPanelSearchFocus( false );
                 break;
             default:
                 break;
@@ -1182,7 +1201,7 @@ bool uMenu::PanelEvent( SDL_Event & event )
             return false;
 
         uPanelHit const * hit = pn_HitAt();
-        su_panelSearchFocus = hit && hit->kind == HIT_SEARCH;
+        su_SetPanelSearchFocus( hit && hit->kind == HIT_SEARCH );
         if ( !hit )
             return true;
         int const item = hit->item;
