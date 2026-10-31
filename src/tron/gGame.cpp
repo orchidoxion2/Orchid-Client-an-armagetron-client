@@ -99,6 +99,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "gArena.h"
 #include "gSpotify.h"
+#include "eFloor.h"
 #include "gPathFinder.h"
 #include "cockpit/cLeaderboard.h"
 #include "gCockpitEditor.h"
@@ -2871,6 +2872,99 @@ void MainMenu(bool ingame){
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
 
+    // small drawing helpers for the previews
+    struct gPreview
+    {
+        static void Rect( REAL l, REAL b, REAL r, REAL t, REAL red, REAL green, REAL blue, REAL alpha )
+        {
+            RenderEnd();
+            glDisable( GL_TEXTURE_2D );
+            Color( red, green, blue, alpha );
+            BeginQuads();
+            Vertex( l, b ); Vertex( r, b ); Vertex( r, t ); Vertex( l, t );
+            RenderEnd();
+        }
+        static void Text( REAL x, REAL y, REAL h, char const * text, sr_fontClass font, REAL alpha = 1 )
+        {
+            rTextField::SetDefaultColor( tColor( 1, 1, 1, 1 ) );
+            rTextField::SetBlendColor( tColor( 1, 1, 1, alpha ) );
+            DisplayText( x, y, h, text, font, -1 );
+            rTextField::SetBlendColor( tColor( 1, 1, 1, 1 ) );
+        }
+        static REAL Channel( int value )
+        {
+            return ( value < 0 ? 0 : ( value > 255 ? 255 : value ) ) / 255.0f;
+        }
+    };
+
+    // a cycle with its trail in the chosen colors, brightened the way the game does it
+    class gOwnColorsPreview: public uMenuItem
+    {
+    public:
+        explicit gOwnColorsPreview( uMenu * menu ): uMenuItem( menu, "$customization_own_colors_preview_help" ){}
+        PanelKind GetPanelKind() override { return PANEL_CUSTOM; }
+        tString GetPanelLabel() override { return tString( tOutput( "$customization_preview_text" ) ); }
+        void Render( REAL x, REAL y, REAL alpha, bool selected ) override
+        {
+            DisplayText( x, y, tString( tOutput( "$customization_preview_text" ) ), selected, alpha );
+        }
+        void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool ) override
+        {
+            gOwnCycleColors const & own = gOwnCycleColors::Of( 0 );
+            REAL cr = gPreview::Channel( own.cycle[0] ), cg = gPreview::Channel( own.cycle[1] ), cb = gPreview::Channel( own.cycle[2] );
+            REAL tr = gPreview::Channel( own.trail[0] ), tg = gPreview::Channel( own.trail[1] ), tb = gPreview::Channel( own.trail[2] );
+            se_MakeColorValid( cr, cg, cb, 1.0f );
+            se_MakeColorValid( tr, tg, tb, .5f );
+
+            REAL const h = t - b, cy = ( b + t ) * .5f, x0 = l + .03f;
+            gPreview::Text( x0, cy, h * .36f, tString( tOutput( "$customization_preview_text" ) ), sr_fontMenu, .9 );
+            REAL const trailL = l + ( r - l ) * .32f, cycleL = l + ( r - l ) * .78f, cycleR = cycleL + ( r - l ) * .1f;
+            // the trail: a wall with a bright top edge, ending at the cycle
+            gPreview::Rect( trailL, cy - h * .16f, cycleL, cy + h * .16f, tr, tg, tb, .55f );
+            gPreview::Rect( trailL, cy + h * .12f, cycleL, cy + h * .16f, tr, tg, tb, 1 );
+            // the cycle body with a dark window
+            gPreview::Rect( cycleL, cy - h * .25f, cycleR, cy + h * .25f, cr, cg, cb, 1 );
+            gPreview::Rect( cycleL + ( cycleR - cycleL ) * .55f, cy - h * .1f, cycleR - ( cycleR - cycleL ) * .12f, cy + h * .14f, 0, 0, 0, .45f );
+        }
+    };
+
+    // a few chat lines with the chosen background, opacity and font
+    class gChatPreview: public uMenuItem
+    {
+    public:
+        explicit gChatPreview( uMenu * menu ): uMenuItem( menu, "$customization_chat_preview_help" ){}
+        PanelKind GetPanelKind() override { return PANEL_CUSTOM; }
+        tString GetPanelLabel() override { return tString( tOutput( "$customization_preview_text" ) ); }
+        void Render( REAL x, REAL y, REAL alpha, bool selected ) override
+        {
+            DisplayText( x, y, tString( tOutput( "$customization_preview_text" ) ), selected, alpha );
+        }
+        void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool ) override
+        {
+            REAL const h = t - b, cy = ( b + t ) * .5f;
+            gPreview::Text( l + .03f, cy, h * .36f, tString( tOutput( "$customization_preview_text" ) ), sr_fontMenu, .9 );
+
+            // a bit of arena behind the chat, so the opacity shows
+            REAL const boxL = l + ( r - l ) * .3f, boxR = r - .015f;
+            gPreview::Rect( boxL, b + .006f, boxR, t - .006f, .02, .02, .04, 1 );
+            for ( int g = 1; g < 6; ++g )
+            {
+                REAL const gx = boxL + ( boxR - boxL ) * g / 6;
+                gPreview::Rect( gx, b + .006f, gx + .002f, t - .006f, .35, .3, .55, .5 );
+            }
+            if ( sr_chatBackground )
+                gPreview::Rect( boxL, b + .006f, boxR, t - .006f, gPreview::Channel( sr_chatBackgroundColor[0] ),
+                                gPreview::Channel( sr_chatBackgroundColor[1] ), gPreview::Channel( sr_chatBackgroundColor[2] ), sr_chatBackgroundAlpha );
+            else
+                gPreview::Rect( boxL, b + .006f, boxR, t - .006f, 0, 0, 0, sr_chatLayer );
+
+            REAL const lineH = h * .3f;
+            gPreview::Text( boxL + .015f, cy + h * .19f, lineH, "0xff4fa3Orchid0xffffff: gg, nice round!", sr_fontConsole );
+            gPreview::Text( boxL + .015f, cy - h * .19f, lineH, "0x7ad0ffPlayer 20xffffff entered the game.", sr_fontConsole );
+        }
+    };
+
+
     class gCustomHudItem: public uMenuItem
     {
     public:
@@ -2891,6 +2985,7 @@ void MainMenu(bool ingame){
                                  "$customization_hud_editor_help", &gCockpitEditor::Open );
 
     uMenu chatLook("$customization_chat_text");
+    gChatPreview chatPreview( &chatLook );
     uMenuItemSelection<int> chatFont( &chatLook, "$customization_chat_font_text", "$customization_chat_font_help", sr_chatFont );
     chatFont.NewChoice( "$customization_chat_font_0_text", "$customization_chat_font_help", 0 );
     chatFont.NewChoice( "$customization_chat_font_1_text", "$customization_chat_font_help", 1 );
@@ -2939,6 +3034,7 @@ void MainMenu(bool ingame){
 
     gOwnCycleColors & own = gOwnCycleColors::Of( 0 );
     uMenu ownColors("$customization_own_colors_text");
+    gOwnColorsPreview ownColorsPreview( &ownColors );
     uMenuItemInt ownTrailB( &ownColors, "$customization_own_trail_b_text", "$customization_own_colors_values_help", own.trail[2], 0, 255, 5 );
     uMenuItemInt ownTrailG( &ownColors, "$customization_own_trail_g_text", "$customization_own_colors_values_help", own.trail[1], 0, 255, 5 );
     uMenuItemInt ownTrailR( &ownColors, "$customization_own_trail_r_text", "$customization_own_colors_values_help", own.trail[0], 0, 255, 5 );

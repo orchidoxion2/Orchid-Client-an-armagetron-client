@@ -303,6 +303,8 @@ public:
     virtual tString GetPanelValue(){ return tString(); }
     virtual bool GetPanelState(){ return false; }
     virtual int GetPanelCursor(){ return -1; }
+    //! draws a PANEL_CUSTOM row into the given rectangle of the settings panel
+    virtual void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool selected ){ Render( ( l + r ) * .5f, ( b + t ) * .5f, 1, selected ); }
 
 protected:
     void SetColor( bool selected, REAL alpha );            //!< Sets the color of text output for this menuitem

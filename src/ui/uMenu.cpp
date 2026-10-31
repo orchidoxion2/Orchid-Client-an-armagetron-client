@@ -1095,7 +1095,7 @@ void uMenu::RenderPanel()
             pn_Text( valueR - .02, cy, pn_body, tString( "\xe2\x80\xba" ), sel ? pn_accent : pn_textDim, 0 );
             break;
         default:
-            item.Render( ( cl + cr ) * .5, cy, 1, sel );
+            item.RenderPanelRow( cl, b, cr, t, sel );
             break;
         }
     }
