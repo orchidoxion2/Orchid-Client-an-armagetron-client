@@ -18,7 +18,7 @@
     usetemplate CDATA ''
 ">
 
-<!ELEMENT Cockpit ((BarGauge | NeedleGauge | Map | Label | VerticalBarGauge | Rectangle | Spotify | WidgetTemplate | Camview )+)>
+<!ELEMENT Cockpit ((BarGauge | NeedleGauge | Map | Label | VerticalBarGauge | Rectangle | Spotify | Leaderboard | WidgetTemplate | Camview )+)>
 <!ATTLIST Cockpit version CDATA #REQUIRED
                   coordinates (square | screen) "square">
 
@@ -77,6 +77,9 @@
 
 <!ELEMENT Spotify ((Position | Size)*)>
 <!ATTLIST Spotify %CommonWidgetAttributes;>
+
+<!ELEMENT Leaderboard ((Position | Size)*)>
+<!ATTLIST Leaderboard %CommonWidgetAttributes;>
 
 <!ELEMENT NeedleGauge ((DataSet |
                   Position |

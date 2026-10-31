@@ -168,6 +168,7 @@ libtron_a_SOURCES=tron/gAIBase.cpp tron/gAIBase.h tron/gAICharacter.cpp tron/gAI
 	tron/cockpit/cGauges.h tron/cockpit/cGauges.cpp \
 	tron/cockpit/cRectangle.h tron/cockpit/cRectangle.cpp\
 	tron/cockpit/cSpotify.h tron/cockpit/cSpotify.cpp\
+	tron/cockpit/cLeaderboard.h tron/cockpit/cLeaderboard.cpp\
 	tron/gFriends.h tron/gFriends.cpp \
 	tron/gSpotify.h tron/gSpotify.cpp \
 	tron/gPathFinder.h tron/gPathFinder.cpp

@@ -100,6 +100,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "gArena.h"
 #include "gSpotify.h"
 #include "gPathFinder.h"
+#include "cockpit/cLeaderboard.h"
 gArena Arena;
 
 static gTutorialBase * sg_tutorial = NULL;
@@ -2868,6 +2869,9 @@ void MainMenu(bool ingame){
 
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
+
+    uMenuItemToggle leaderboard( &customization, "$customization_leaderboard_text",
+                                 "$customization_leaderboard_help", sg_hudLeaderboard );
 
     class gNameGradientPreview: public uMenuItem
     {

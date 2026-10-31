@@ -71,6 +71,10 @@
                 </Table>
             </Face>
         </Label>
+        <Leaderboard camera="all">
+            <Position x="-0.97" y="0.3" />
+            <Size width="0.36" height="0.05" />
+        </Leaderboard>
         <Spotify camera="all">
             <Position x="0.53" y="0.9" />
             <Size width="0.435" height="0.15" />
