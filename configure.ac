@@ -1382,8 +1382,6 @@ export CXXFLAGS
 
 fi dnl (dedicated server)
 
-dnl the client branch above switches to C; do the same for the server,
-dnl or the function checks below fail under -Werror in C++ mode
 AC_LANG([C++])
 AC_LANG([C])
 

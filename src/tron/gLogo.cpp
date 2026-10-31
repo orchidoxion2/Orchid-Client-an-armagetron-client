@@ -176,7 +176,6 @@ void gLogo::Display()
 
         Color(1,1,1, sg_DisplayStatus);
 
-        // the title image is 2:1; show its middle part that fills the screen, unstretched
         REAL const screenAspect = sr_screenHeight > 0 ? REAL(sr_screenWidth)/sr_screenHeight : REAL(4./3.);
         REAL const imageAspect = 2;
         REAL u0 = 0, u1 = 1, v0 = 0, v1 = 1;

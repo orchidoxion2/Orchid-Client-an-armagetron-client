@@ -264,7 +264,6 @@ public:
 // Font config items
 
 static char const * sr_defaultFontFile = "Inter-Medium.otf";
-// the previous default; saved configurations still name it, so it gets replaced as well
 static char const * sr_oldDefaultFontFile = "Armagetronad.ttf";
 
 tString fontFile(sr_defaultFontFile);

@@ -155,7 +155,6 @@ static REAL sg_speedCycleSoundMach=0.1f;
 static tSettingItem<REAL> c_ssm("CYCLE_SOUND_MACH",
                                sg_speedCycleSoundMach);
 
-// volume of the cycle engine sound
 static REAL sg_engineVolume=0.15f;
 static tConfItem<REAL> sg_engineVolumeConf("SOUND_ENGINE_VOLUME",
                                            sg_engineVolume);

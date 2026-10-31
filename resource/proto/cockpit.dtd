@@ -21,8 +21,6 @@
 <!ELEMENT Cockpit ((BarGauge | NeedleGauge | Map | Label | VerticalBarGauge | Rectangle | WidgetTemplate | Camview )+)>
 <!ATTLIST Cockpit version CDATA #REQUIRED
                   coordinates (square | screen) "square">
-<!-- coordinates: "square" is the classic layout space (the visible height is about -1 to 0.5),
-     "screen" maps -1..1 to the edges of the player's view in both directions -->
 
 <!ELEMENT WidgetTemplate ((DataSet |
                   Position |
@@ -200,7 +198,6 @@
 <!ATTLIST Angles min CDATA "0">
 <!ATTLIST Angles max CDATA "180">
 
-<!-- horizontal alignment of a label: the position is its left edge, center or right edge -->
 <!ELEMENT Align EMPTY>
 <!ATTLIST Align value (left | center | right) "left">
 

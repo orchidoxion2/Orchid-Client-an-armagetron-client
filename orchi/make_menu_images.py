@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-# Draws the artwork for the Orchid Client box main menu into textures/menu/.
-# Flat, clean style matching the server list: dark slate, light glyphs, one accent color.
-# All images are 512x256 with the subject centered; the menu crops, never stretches.
-# Usage: python3 orchi/make_menu_images.py
 import os
 import sys
 
@@ -11,7 +7,7 @@ from PIL import Image, ImageDraw
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "textures", "menu")
 
 W, H = 512, 256
-SS = 4  # supersampling factor for smooth edges
+SS = 4
 
 BG = (16, 21, 27)
 GRID = (28, 35, 43)
@@ -30,19 +26,16 @@ def finish(img):
 
 
 def s(*v):
-    """scales design coordinates to the supersampled canvas"""
     return [x * SS for x in v]
 
 
 def play():
     img, d = canvas()
-    # top-down arena: subtle grid inside a rim
     for x in range(32, W, 32):
         d.line(s(x, 0, x, H), fill=GRID, width=SS)
     for y in range(32, H, 32):
         d.line(s(0, y, W, y), fill=GRID, width=SS)
     d.rectangle(s(16, 16, W - 16, H - 16), outline=(60, 70, 82), width=3 * SS)
-    # two flat light trails with right-angle turns, square cycle heads
     a = [(48, 208), (176, 208), (176, 112), (304, 112), (304, 64)]
     b = [(464, 48), (400, 48), (400, 176), (240, 176)]
     d.line([c * SS for p in a for c in p], fill=ORANGE, width=6 * SS, joint="curve")
@@ -54,7 +47,6 @@ def play():
 
 def icon(draw_fn):
     img, d = canvas()
-    # icon area: upper part of the image, so the label strip of the box leaves it free
     cx, cy, r = W / 2, 92, 62
     draw_fn(d, cx, cy, r)
     return finish(img)

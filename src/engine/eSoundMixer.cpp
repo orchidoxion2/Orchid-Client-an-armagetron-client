@@ -106,7 +106,6 @@ static tConfItem<int> sw("MUSIC_VOLUME",musicVolume);
 int numSoundcardChannels=2;
 static tConfItem<int> scc("SOUND_CHANNELS",numSoundcardChannels);
 
-// this client plays no music; the setting is only kept so old config files load cleanly
 int musicActive = 0;
 static tConfItem<int> se("MUSIC_ACTIVE", musicActive);
 

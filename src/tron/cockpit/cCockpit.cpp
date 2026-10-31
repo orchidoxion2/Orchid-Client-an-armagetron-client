@@ -319,7 +319,6 @@ tValue::BasePtr cCockpit::cb_TopOtherScore(void){
     return tValue::BasePtr(new tValue::Int(top));
 }
 
-//! the player's color as a color code, for text in that color
 static tString cc_ColorCode( ePlayerNetID const * player )
 {
     REAL r = .6, g = .6, b = .6;
@@ -880,7 +879,6 @@ static void display_cockpit_lucifer() {
             }
         }
 
-        // select the viewport: as it is, or the classic square one, corrected for the aspect ratio
         if(player_cockpit->ScreenCoordinates())
             port->Select();
         else

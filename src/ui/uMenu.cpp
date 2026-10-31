@@ -161,22 +161,21 @@ static rNoAutoDisplayAtNewlineCallback su_noNewline( uMenu::MenuActive );
 // static rSmallConsoleCallback su_smallConsole( su_InMenu );
 
 // *****************************************************
-// settings panel state
 // *****************************************************
 
-static bool     su_panelActive = false;        // between BeginPanel() and EndPanel()
-static uMenu *  su_panelBackdrop = nullptr;    // menu the panel was opened from, drawn behind it
-static uMenu *  su_panelRoot = nullptr;        // first menu entered in the panel; its items are the sections
-static int      su_panelDepth = 0;             // menus currently entered in the panel
-static int      su_panelSection = -1;          // root item that is open right now
-static int      su_panelPending = -1;          // root item to open once the menus above the root are left
-static bool     su_panelClose = false;         // leave all panel menus
+static bool     su_panelActive = false;
+static uMenu *  su_panelBackdrop = nullptr;
+static uMenu *  su_panelRoot = nullptr;
+static int      su_panelDepth = 0;
+static int      su_panelSection = -1;
+static int      su_panelPending = -1;
+static bool     su_panelClose = false;
 static bool     su_renderingBackdrop = false;
 static tString  su_panelSearch;
 static bool     su_panelSearchFocus = false;
 static REAL     su_panelMouseX = -10, su_panelMouseY = -10;
-static REAL     su_panelAnimTime = 0;          // time the slide in animation has run
-static double   su_panelAnimLast = -1;         // time of the last panel frame
+static REAL     su_panelAnimTime = 0;
+static double   su_panelAnimLast = -1;
 
 void uMenu::BeginPanel( uMenu * backdrop )
 {
@@ -198,7 +197,6 @@ void uMenu::EndPanel()
     su_panelActive = false;
 }
 
-//! counts the menus entered while the panel is open; the first one is the root
 class uPanelLevel
 {
 public:
@@ -226,8 +224,6 @@ private:
 };
 
 #ifndef DEDICATED
-// frees and shows the mouse cursor while a menu is open; afterwards,
-// restores the mode the screen code uses (hidden and relative in fullscreen)
 class uMenuMouseGuard
 {
 public:
@@ -243,7 +239,6 @@ public:
         SDL_ShowCursor( fullscreen ? SDL_DISABLE : SDL_ENABLE );
     }
 
-    //! call every frame: the screen code may lock the mouse again on mode changes
     void Free()
     {
         if ( !sr_screen )
@@ -399,7 +394,6 @@ void uMenu::OnEnter(){
         mouseGuard.Free();
 #endif
 
-        // settings panel: close it, or switch to another section
         if ( su_panelActive && su_panelRoot && this != su_panelBackdrop )
         {
             if ( su_panelClose || ( su_panelPending >= 0 && this != su_panelRoot ) )
@@ -573,7 +567,6 @@ void uMenu::HandleEvent( SDL_Event event )
         }
         break;
 
-        // mouse: hover selects, left click activates, right click goes back, wheel moves
         case SDL_MOUSEMOTION:
         {
             int item = ItemAt( event.motion.x, event.motion.y );
@@ -695,13 +688,11 @@ void uMenu::RenderTitle()
 }
 
 // *****************************************************
-// settings panel drawing
 // *****************************************************
 
 #ifndef DEDICATED
 namespace
 {
-// orchid palette: plum backgrounds, petal pink text, orchid pink accent
 struct uPanelColor { REAL r, g, b, a; };
 const uPanelColor pn_dim         = { .039, .016, .047, .6 };
 const uPanelColor pn_rail        = { .078, .043, .098, 1 };
@@ -772,7 +763,6 @@ void pn_Frame( REAL l, REAL b, REAL r, REAL t, uPanelColor const & c )
     RenderEnd();
 }
 
-// text is never drawn smaller than 18 pixels, so measure with the real height
 REAL pn_Height( REAL h )
 {
     return sr_screenHeight > 0 ? std::max( h, REAL( 18.0 / sr_screenHeight ) ) : h;
@@ -793,7 +783,6 @@ void pn_EraseLastChar( tString & s )
     s.erase( cut );
 }
 
-//! shortens the text with an ellipsis until it fits
 tString pn_Fit( tString const & s, REAL h, REAL maxWidth )
 {
     if ( maxWidth <= 0 || pn_Width( s, h ) <= maxWidth )
@@ -809,10 +798,8 @@ tString pn_Fit( tString const & s, REAL h, REAL maxWidth )
     return tString();
 }
 
-//! align: -1 left at x, 0 centered, 1 right at x
 void pn_Text( REAL x, REAL y, REAL h, tString const & s, uPanelColor const & c, int align = -1, REAL maxWidth = 0 )
 {
-    // the color goes through the blend color: dark default colors get a backdrop
     rTextField::SetDefaultColor( tColor( 1, 1, 1, 1 ) );
     rTextField::SetBlendColor( tColor( c.r, c.g, c.b, c.a ) );
     tString t = pn_Fit( s, h, maxWidth );
@@ -820,7 +807,6 @@ void pn_Text( REAL x, REAL y, REAL h, tString const & s, uPanelColor const & c, 
     rTextField::SetBlendColor( tColor( 1, 1, 1, 1 ) );
 }
 
-//! the item's label without colors and the trailing colon the classic menus use
 tString pn_Label( uMenuItem & item )
 {
     tString label = tColoredString::RemoveColors( item.GetPanelLabel() );
@@ -845,8 +831,6 @@ void uMenu::RenderPanel()
     REAL const aspect = sr_screenHeight > 0 ? REAL( sr_screenWidth ) / sr_screenHeight : 4.0/3.0;
     REAL const width = std::min( REAL( 1.4 ), REAL( 1.65 / aspect ) );
 
-    // slide in from the right edge, quickly at first, slowing down at the end;
-    // a slow frame (fonts are prepared on the first one) pauses the slide instead of skipping it
     double const now = tSysTimeFloat();
     if ( su_panelAnimLast >= 0 )
         su_panelAnimTime += std::min( now - su_panelAnimLast, 1.0 / 30 );
@@ -857,7 +841,6 @@ void uMenu::RenderPanel()
     REAL const left = 1 - width * ease, railRight = left + width * .3;
     REAL const cl = railRight + .05, cr = .96;
 
-    // the menu the panel came from, dimmed
     if ( su_panelBackdrop )
     {
         su_renderingBackdrop = true;
@@ -871,7 +854,6 @@ void uMenu::RenderPanel()
     pn_Rect( railRight, -1, 1, 1, pn_content );
     pn_Hit( left, -1, 1, 1, HIT_PANEL );
 
-    // sections
     REAL y = .87;
     pn_Text( left + .05, y, pn_small, tString( "S E T T I N G S" ), pn_textLow );
     y -= .1;
@@ -899,7 +881,6 @@ void uMenu::RenderPanel()
         }
     }
 
-    // back
     {
         REAL const b = -.96, t = -.84;
         bool hover = pn_Hover( left, b, railRight, t );
@@ -907,7 +888,6 @@ void uMenu::RenderPanel()
         pn_Hit( left, b, railRight, t, HIT_BACK );
     }
 
-    // search box
     {
         REAL const b = .835, t = .925;
         pn_Rect( cl, b, cr, t, pn_chip );
@@ -924,7 +904,6 @@ void uMenu::RenderPanel()
         else
             pn_Text( cl + .025, cy, pn_body, tString( "Search" ), pn_textLow );
 
-        // magnifier
         REAL const mx = cr - .045, my = cy + .006, mr = .014;
         glDisable( GL_TEXTURE_2D );
         glLineWidth( 2 );
@@ -944,10 +923,8 @@ void uMenu::RenderPanel()
         pn_Hit( cl, b, cr, t, HIT_SEARCH );
     }
 
-    // page title
     pn_Text( cl, .74, pn_title, tString( title ), pn_text, -1, cr - cl );
 
-    // rows
     REAL const listTop = .66, listBottom = -.70, rowH = .085, gap = .012, dividerH = .045;
     std::vector< int > rows;
     std::vector< REAL > rowTop;
@@ -964,7 +941,6 @@ void uMenu::RenderPanel()
         total += ( kind == uMenuItem::PANEL_DIVIDER ? dividerH : rowH ) + gap;
     }
 
-    // the exit item has no row (back does that); select the top row instead
     if ( selected >= 0 && selected < items.Len() && items[selected]->GetPanelKind() == uMenuItem::PANEL_EXIT && !rows.empty() )
     {
         for ( int r: rows )
@@ -975,7 +951,6 @@ void uMenu::RenderPanel()
             }
     }
 
-    // keep keyboard selection in view
     REAL const view = listTop - listBottom;
     if ( selected != panelLastSelected_ )
     {
@@ -1057,7 +1032,6 @@ void uMenu::RenderPanel()
             if ( sel && cursor >= 0 && int( tSysTimeFloat() * 2 ) % 2 == 0 )
                 value.insert( std::min( size_t( cursor ), value.size() ), "|" );
             value = tColoredString::RemoveColors( value );
-            // long texts show their end
             while ( value.size() > 0 && pn_Width( value, pn_body ) > tw - .04 )
             {
                 size_t cut = 1;
@@ -1070,7 +1044,6 @@ void uMenu::RenderPanel()
         }
         case uMenuItem::PANEL_KEYS:
         {
-            // one chip per key, right aligned
             tString value = item.GetPanelValue();
             std::vector< tString > keys;
             size_t start = 0;
@@ -1108,7 +1081,6 @@ void uMenu::RenderPanel()
         }
     }
 
-    // scroll bar
     if ( total - gap > view )
     {
         REAL const h = view * view / ( total - gap );
@@ -1116,13 +1088,11 @@ void uMenu::RenderPanel()
         pn_Rect( cr + .012, top - h, cr + .02, top, pn_row );
     }
 
-    // help for the selected item
     if ( selected >= 0 && selected < items.Len() )
     {
         tString help = items[selected]->Help();
         if ( help.size() > 0 )
         {
-            // one text field per paragraph: a new line resets the text color
             help = tColoredString::RemoveColors( help );
             REAL top = listBottom - .05;
             size_t start = 0;
@@ -1140,7 +1110,6 @@ void uMenu::RenderPanel()
                     c.SetWidth( cr - cl );
                     c.EnableLineWrap();
                     c << paragraph;
-                    // estimated lines; word wrapping may need one more
                     int lines = 1 + int( pn_Width( paragraph, pn_small ) / ( ( cr - cl ) * .92 ) );
                     top -= lines * pn_Height( pn_small ) * 1.25 + .01;
                 }
@@ -1153,7 +1122,6 @@ void uMenu::RenderPanel()
 
 bool uMenu::PanelEvent( SDL_Event & event )
 {
-    // typing into the search box
     if ( su_panelSearchFocus )
     {
         switch ( event.type )
@@ -1283,7 +1251,6 @@ bool uMenu::PanelEvent( SDL_Event & ){ return false; }
 void uMenu::EnterSelected()
 {
 #ifndef DEDICATED
-    // remember which panel section is open
     bool panelSection = su_panelActive && this == su_panelRoot;
     if ( panelSection )
         su_panelSection = selected;
@@ -1332,7 +1299,6 @@ void uMenu::EnterSelected()
 int uMenu::ItemAt(int x, int y)
 {
 #ifndef DEDICATED
-    // the settings panel does its own mouse handling
     if ( su_panelActive && this != su_panelBackdrop )
         return -1;
 
@@ -1344,7 +1310,6 @@ int uMenu::ItemAt(int x, int y)
     if ( height <= 0 )
         return -1;
 
-    // menu coordinates go from -1 (bottom) to 1 (top); items are centered on YPos
     REAL menuY = 1 - 2 * REAL(y) / height;
     if ( menuY <= menuBot || menuY >= menuTop )
         return -1;

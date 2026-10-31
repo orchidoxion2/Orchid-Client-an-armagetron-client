@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Adds Orchid Client to the application menu/search. Run it again after moving this folder.
-# Remove with: rm ~/.local/share/applications/orchid-client.desktop
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
 mkdir -p "$APPS"
-# the entry of the earlier name, Orchi Tron
 rm -f "$APPS/orchi-tron.desktop"
 
 cat > "$APPS/orchid-client.desktop" <<EOF

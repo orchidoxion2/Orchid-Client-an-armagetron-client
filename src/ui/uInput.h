@@ -370,7 +370,7 @@ public:
     virtual tString GetPanelLabel();
     virtual tString GetPanelValue();
 private:
-    tString BoundKeys(); //!< names of the bound keys, separated by ", "; empty if unbound
+    tString BoundKeys();
 };
 
 #endif

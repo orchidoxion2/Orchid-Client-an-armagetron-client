@@ -137,7 +137,6 @@ void rConsole::Render(){
     }
     else
     {
-        // 26 pixel font, easy to read while playing
         rCHEIGHT_CON=26*2.0/H;
         rCWIDTH_CON=13*2.0/W;
 

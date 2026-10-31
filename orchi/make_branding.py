@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-# Makes the Orchid Client title screen and icons from the art in orchi/art/.
-#   textures/title.jpg              title screen: the art centered on a wide 2:1 canvas
-#   textures/icon.png               window icon, 48 px
-#   desktop/icons/NxN/armagetronad.png  application icons
-#   textures/menu/background.jpg    menu background, the 16:9 art stored as 2048x1024
-# Usage: python3 orchi/make_branding.py
 import os
 import sys
 
@@ -18,7 +12,6 @@ def title():
     src = Image.open(os.path.join(ART, "title_source.png")).convert("RGB")
     background = src.getpixel((2, 2))
     canvas = Image.new("RGB", (2048, 1024), background)
-    # the game shows the middle of this canvas that fits the screen, never stretched
     height = 700
     art = src.resize((round(src.width * height / src.height), height), Image.LANCZOS)
     canvas.paste(art, ((canvas.width - art.width) // 2, (canvas.height - art.height) // 2))
@@ -26,7 +19,6 @@ def title():
 
 
 def menu_background():
-    # power of two size for old graphics cards; the game draws it as 16:9 again
     src = Image.open(os.path.join(ART, "menu_background_source.png")).convert("RGB")
     src.resize((2048, 1024), Image.LANCZOS).save(os.path.join(ROOT, "textures", "menu", "background.jpg"), quality=92)
 
@@ -36,19 +28,16 @@ def icon():
     w, h = src.size
     pink = lambda p: p[0] > 150 and p[2] > 100
 
-    # bounds of the pink square, measured through its middle
     xs = [x for x in range(w) if pink(src.getpixel((x, h // 2)))]
     ys = [y for y in range(h) if pink(src.getpixel((w // 2, y)))]
     cx, cy = (xs[0] + xs[-1] + 1) / 2, (ys[0] + ys[-1] + 1) / 2
     radius = min(xs[-1] + 1 - xs[0], ys[-1] + 1 - ys[0]) / 2 - .5
 
-    # smooth circular mask, drawn at 8x and scaled down
     ss = 8
     mask = Image.new("L", (w * ss, h * ss), 0)
     ImageDraw.Draw(mask).ellipse(((cx - radius) * ss, (cy - radius) * ss, (cx + radius) * ss, (cy + radius) * ss), fill=255)
     mask = mask.resize((w, h), Image.LANCZOS)
 
-    # outside the circle: transparent, but pink, so scaling leaves no dark fringe
     edge = src.getpixel((int(cx), int(cy - radius + 3)))
     rgb = Image.composite(src, Image.new("RGB", (w, h), edge), mask)
     rgba = rgb.copy()

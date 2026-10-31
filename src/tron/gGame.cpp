@@ -2398,7 +2398,6 @@ static uMenuItemFunction sg_docMenuItem
 
 #endif
 
-//! opens the settings as a panel on the right side, over the menu it was chosen from
 class gSettingsPanelItem: public uMenuItemSubmenu
 {
 public:
@@ -2417,14 +2416,11 @@ public:
 };
 
 #ifndef DEDICATED
-//! menu that shows its items as picture boxes, once every item has a box
 class gBoxMenu: public uMenu
 {
 public:
     explicit gBoxMenu(tOutput const & title): uMenu(title, false){}
 
-    //! puts an item into a box showing the image (width/height ratio imageAspect);
-    //! coordinates: -1 to 1, y up, as on a 4:3 screen
     void SetBox(uMenuItem * item, REAL left, REAL bottom, REAL right, REAL top, char const * image, REAL imageAspect)
     {
         if ( item )
@@ -2451,8 +2447,6 @@ protected:
             bool sel = IndexOf( box.item ) == selected;
             REAL const left = box.left * scaleX, right = box.right * scaleX;
 
-            // picture, dimmed unless selected; shows the centered part of the
-            // image that has the box's shape, so it is cropped, never stretched
             REAL const boxAspect = ( right - left ) / ( box.top - box.bottom ) * screenAspect;
             REAL u0 = 0, u1 = 1, v0 = 0, v1 = 1;
             if ( boxAspect > box.imageAspect )
@@ -2475,7 +2469,6 @@ protected:
             RenderEnd();
             glDisable( GL_TEXTURE_2D );
 
-            // dark strip behind the label
             Color( 0, 0, 0, .65 );
             BeginQuads();
             Vertex( left,  box.bottom );
@@ -2484,7 +2477,6 @@ protected:
             Vertex( left,  box.bottom + labelHeight );
             RenderEnd();
 
-            // frame
             glLineWidth( sel ? 3 : 1 );
             if ( sel )
                 Color( .3, .85, .91, 1 );
@@ -2504,7 +2496,6 @@ protected:
         }
     }
 
-    //! the box layout is designed for 4:3; on wider screens it is narrowed to keep its shape
     static REAL ScaleX()
     {
         if ( sr_screenWidth <= 0 || sr_screenHeight <= 0 )
@@ -2573,7 +2564,6 @@ private:
         return -1;
     }
 
-    //! boxes are only used if every item has one
     bool Complete()
     {
         if ( boxes_.empty() || int(boxes_.size()) != items.Len() )
@@ -2584,7 +2574,6 @@ private:
         return true;
     }
 
-    //! selects the nearest box in the given direction
     void Move( REAL dx, REAL dy )
     {
         Box const * current = nullptr;
@@ -2836,7 +2825,6 @@ void MainMenu(bool ingame){
             (&Settings,"$sound_menu_text",
              "$sound_menu_help",&se_SoundMenu);
 
-    // all key bindings in one place: players' driving and camera keys, global keys
     uMenu controls("$settings_controls_text");
     uMenuItemFunction controlsGlobal
     (&controls,"$misc_global_key_text",
@@ -2886,7 +2874,6 @@ void MainMenu(bool ingame){
         rViewport::Update(MAX_PLAYERS);
         // ePlayerNetID::Update();
 
-        // box layout: big play box and settings on top, player setup, help and exit below
         MainMenu.SetBox( gamemenuitem,   -.9, -.02,  .25,  .62, "textures/menu/play.png", 2 );
         MainMenu.SetBox( &subm_settings, .35, -.02,   .9,  .62, "textures/menu/settings.png", 2 );
         MainMenu.SetBox( se_PlayerMenu,  -.9, -.56,  -.4, -.12, "textures/menu/player.png", 2 );

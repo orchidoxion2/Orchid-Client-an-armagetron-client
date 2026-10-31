@@ -328,7 +328,7 @@ void gServerBrowser::BrowseLAN()
 }
 
 #ifndef DEDICATED
-static void sg_BrowseServerList(); // the full screen server list, below
+static void sg_BrowseServerList();
 #endif
 
 void gServerBrowser::BrowseServers()
@@ -1157,12 +1157,6 @@ gServerStartMenuItem::~gServerStartMenuItem()
 {
 }
 
-// *******************************************************************************
-// *
-// *   Server list screen: full screen server browser with sidebar filters,
-// *   a server table and a details panel.
-// *
-// *******************************************************************************
 
 #ifndef DEDICATED
 #include "ePlayer.h"
@@ -1173,7 +1167,6 @@ gServerStartMenuItem::~gServerStartMenuItem()
 
 namespace
 {
-// orchid palette: plum backgrounds, petal pink text, orchid pink accent, golden center for warnings
 struct gSLColor { REAL r, g, b, a; };
 const gSLColor sl_bg      = { .071, .035, .086, 1 };
 const gSLColor sl_panel   = { .102, .059, .122, 1 };
@@ -1219,7 +1212,6 @@ void sl_Line( REAL x1, REAL y1, REAL x2, REAL y2, gSLColor const & c, REAL width
     glLineWidth( 1 );
 }
 
-// text is never drawn smaller than 18 pixels, measure with the real height
 REAL sl_RealHeight( REAL h )
 {
     return sr_screenHeight > 0 ? std::max( h, REAL( 18.0 / sr_screenHeight ) ) : h;
@@ -1230,7 +1222,6 @@ REAL sl_TextWidth( tString const & s, REAL h )
     return rTextField::GetTextLength( s, sl_RealHeight( h ), true );
 }
 
-//! shortens the text with an ellipsis until it fits
 tString sl_Fit( tString const & s, REAL h, REAL maxWidth )
 {
     if ( maxWidth <= 0 || sl_TextWidth( s, h ) <= maxWidth )
@@ -1238,7 +1229,6 @@ tString sl_Fit( tString const & s, REAL h, REAL maxWidth )
     std::string t = s;
     while ( !t.empty() )
     {
-        // drop one UTF-8 character
         size_t cut = t.size() - 1;
         while ( cut > 0 && ( static_cast<unsigned char>( t[cut] ) & 0xC0 ) == 0x80 )
             --cut;
@@ -1250,10 +1240,8 @@ tString sl_Fit( tString const & s, REAL h, REAL maxWidth )
     return tString();
 }
 
-//! align: -1 left at x, 0 centered on x, 1 right at x
 void sl_Text( REAL x, REAL y, REAL h, tString const & s, gSLColor const & c, int align = -1, REAL maxWidth = 0 )
 {
-    // the color goes through the blend color: dark default colors get a backdrop
     rTextField::SetDefaultColor( tColor( 1, 1, 1, 1 ) );
     rTextField::SetBlendColor( tColor( c.r, c.g, c.b, c.a ) );
     tString t = sl_Fit( s, h, maxWidth );
@@ -1261,7 +1249,6 @@ void sl_Text( REAL x, REAL y, REAL h, tString const & s, gSLColor const & c, int
     rTextField::SetBlendColor( tColor( 1, 1, 1, 1 ) );
 }
 
-//! letter spaced, upper case label
 tString sl_Spaced( tString const & s )
 {
     tString r;
@@ -1279,7 +1266,6 @@ tString sl_Plain( tString const & s )
     return tColoredString::RemoveColors( s, false );
 }
 
-// game modes, guessed from the server name
 enum gSLMode { MODE_FORT, MODE_SUMO, MODE_OTHER };
 
 bool sl_Contains( tString const & lower, char const * what )
@@ -1319,7 +1305,6 @@ gSLMode sl_Mode( nServerInfo const & s )
     return MODE_OTHER;
 }
 
-//! ranked servers are the ones hosted by the Retrocycles League (RCL)
 bool sl_Ranked( nServerInfo const & s )
 {
     tString n = sl_Plain( s.GetName() );
@@ -1335,13 +1320,12 @@ bool sl_Ranked( nServerInfo const & s )
     return false;
 }
 
-//! can we connect at all? (full servers still count, to spectate)
 bool sl_Joinable( nServerInfo const & s )
 {
     return !s.Polling() && s.Reachable() && s.Compatibility() == nServerInfo::Compat_Ok;
 }
 
-const REAL sl_nearPing = .1; // seconds; servers below count as near
+const REAL sl_nearPing = .1;
 
 std::vector< tString > sl_PlayerNames( nServerInfo const & s )
 {
@@ -1361,7 +1345,6 @@ std::vector< tString > sl_PlayerNames( nServerInfo const & s )
     return names;
 }
 
-// on-screen actions
 enum gSLAction
 {
     ACT_PROFILE, ACT_SEARCH, ACT_MODE, ACT_REGION, ACT_FILTER, ACT_REFRESH,
@@ -1377,7 +1360,6 @@ struct gSLHit
 
 class gServerListScreen;
 
-//! the single (invisible) item of the screen; keeps the network going
 class gServerListItem: public uMenuItem
 {
 public:
@@ -1395,7 +1377,6 @@ public:
     {
         uMenu::OnRender();
 
-        // resort regularly, new answers arrive all the time
         if ( resortTime_ < tSysTimeFloat() || resort_ )
         {
             nServerInfo::CalcScoreAll();
@@ -1415,7 +1396,6 @@ protected:
         hits_.clear();
         REAL const top = .88, bottom = -.93, sideRight = -.62, detailLeft = .46;
 
-        // frame: top bar, bottom bar, sidebar, details panel
         sl_Rect( -1, -1, 1, 1, sl_bg );
         sl_Rect( -1, bottom, sideRight, top, sl_panel );
         sl_Rect( detailLeft, bottom, 1, top, sl_panel );
@@ -1479,12 +1459,11 @@ protected:
 private:
     gServerListItem item_;
 
-    // view state
     nServerInfo::PrimaryKey sortKey_ = nServerInfo::KEY_PING;
     bool resort_ = true;
     double resortTime_ = 0;
-    int mode_ = -1;                 // -1: all, else gSLMode
-    int region_ = 2;                // 0 near, 1 far, 2 all
+    int mode_ = -1;
+    int region_ = 2;
     bool hideEmpty_ = false, hideFull_ = false, rankedOnly_ = false;
     tString search_;
     bool searching_ = false, ignoreSlash_ = false;
@@ -1493,9 +1472,8 @@ private:
     double lastClickTime_ = 0;
     nServerInfo * lastClicked_ = nullptr;
 
-    // per frame data
     std::vector< nServerInfo * > list_;
-    int modeCount_[4] = { 0, 0, 0, 0 };    // all, fort, sumo, others
+    int modeCount_[4] = { 0, 0, 0, 0 };
     int totalServers_ = 0, totalPlayers_ = 0;
     std::vector< gSLHit > hits_;
     REAL mouseX_ = -10, mouseY_ = -10;
@@ -1525,7 +1503,6 @@ private:
         }
     }
 
-    // **************** filtering ****************
 
     bool PassesFilters( nServerInfo const & s, bool checkMode ) const
     {
@@ -1614,11 +1591,9 @@ private:
         ClampScroll();
     }
 
-    // **************** actions ****************
 
     void Click()
     {
-        // later hits are drawn on top
         for ( auto it = hits_.rbegin(); it != hits_.rend(); ++it )
         {
             if ( Hover( it->l, it->b, it->r, it->t ) )
@@ -1686,7 +1661,6 @@ private:
 
     void Refresh()
     {
-        // ask every listed server again for its players and ping
         if ( nServerInfoAdmin::GetAdmin() )
             nServerInfoAdmin::GetAdmin()->BeforeNewScan();
         nServerInfo::StartQueryAll( sg_queryType );
@@ -1703,7 +1677,6 @@ private:
         nServerInfo::GetFromLANContinuouslyStop();
         Exit();
 
-        // spectating: all local players watch for this connection only
         std::vector< bool > spectating;
         for ( int i = 0; i < MAX_PLAYERS; ++i )
         {
@@ -1736,7 +1709,6 @@ private:
             case SDLK_BACKSPACE:
                 if ( search_.size() > 0 )
                 {
-                    // remove one UTF-8 character
                     size_t cut = search_.size() - 1;
                     while ( cut > 0 && ( static_cast<unsigned char>( search_[cut] ) & 0xC0 ) == 0x80 )
                         --cut;
@@ -1755,7 +1727,7 @@ private:
             case SDLK_DOWN:
                 break;
             default:
-                return true; // the text arrives as text input
+                return true;
             }
         }
 
@@ -1781,19 +1753,17 @@ private:
         }
     }
 
-    // **************** drawing ****************
 
     void RenderTopBar( REAL top )
     {
         REAL const y = ( 1 + top ) * .5;
 
-        // logo
         sl_Line( -.955, y - .025, -.955, y + .02, sl_accent, 2 );
         sl_Line( -.955, y + .02, -.93, y + .02, sl_accent, 2 );
         sl_Line( -.94, y - .025, -.94, y + .005, sl_accent, 2 );
         tString title;
         title << tOutput( "$game_name" );
-        REAL x = -.55; // tabs
+        REAL x = -.55;
         sl_Text( -.91, y, sl_body, sl_Spaced( title.ToUpper() ), sl_textHi, -1, x - .05 + .91 );
 
         sl_Text( x, y, sl_body, tString( "Servers" ), sl_textHi );
@@ -1805,7 +1775,6 @@ private:
         sl_Text( x, y, sl_body, tString( "Profile" ), hov ? sl_textHi : sl_textMid );
         AddHit( x - .02, top, x + pw + .02, 1, ACT_PROFILE );
 
-        // search box
         REAL const sl = .24, sr = .72, sb = y - .035, st = y + .035;
         sl_Rect( sl, sb, sr, st, sl_panel );
         sl_Frame( sl, sb, sr, st, searching_ ? sl_accent : sl_border );
@@ -1820,7 +1789,6 @@ private:
             sl_Text( sl + .02, y, sl_small, tString( "Search servers, players\xe2\x80\xa6" ), sl_textLow, -1, sr - sl - .04 );
         AddHit( sl, sb, sr, st, ACT_SEARCH );
 
-        // local player
         tString name;
         if ( ePlayer * p = ePlayer::PlayerConfig( 0 ) )
             name = sl_Plain( p->name );
@@ -1835,7 +1803,6 @@ private:
         REAL const l = -.96, r = right - .04;
         REAL y = top - .09;
 
-        // mode
         sl_Text( l, y, sl_small, sl_Spaced( tString( "MODE" ) ), sl_textLow );
         y -= .075;
         char const * modes[] = { "All", "Fortress", "Sumo", "Others" };
@@ -1858,7 +1825,6 @@ private:
             y -= .075;
         }
 
-        // region
         y -= .04;
         sl_Text( l, y, sl_small, sl_Spaced( tString( "REGION" ) ), sl_textLow );
         y -= .08;
@@ -1874,7 +1840,6 @@ private:
             AddHit( bl, b, br, t, ACT_REGION, i );
         }
 
-        // filters
         y -= .12;
         sl_Text( l, y, sl_small, sl_Spaced( tString( "FILTER" ) ), sl_textLow );
         y -= .075;
@@ -1882,7 +1847,6 @@ private:
         bool const states[] = { hideEmpty_, hideFull_, rankedOnly_ };
         for ( int i = 0; i < 3; ++i )
         {
-            // square check box, whatever the screen shape
             REAL const box = .012;
             REAL const boxY = sr_screenHeight > 0 ? box * sr_screenWidth / sr_screenHeight : box;
             REAL const bx = l + box;
@@ -1900,7 +1864,6 @@ private:
             y -= .07;
         }
 
-        // totals
         tString players, servers;
         players << totalPlayers_ << " players online";
         servers << totalServers_ << " servers listed";
@@ -1913,7 +1876,6 @@ private:
         REAL const l = left + .05, r = right - .04;
         REAL y = top - .09;
 
-        // title and subtitle
         sl_Text( l, y, sl_big, tString( "Servers" ), sl_textHi );
         tString sub;
         char const * modeNames[] = { "All", "Fortress", "Sumo", "Others" };
@@ -1923,7 +1885,6 @@ private:
         REAL tw = sl_TextWidth( tString( "Servers" ), sl_big );
         sl_Text( l + tw + .04, y - .005, sl_small, sub, sl_textLow, -1, r - l - tw - .32 );
 
-        // refresh button
         REAL const rl = r - .22, rb = y - .04, rt = y + .04;
         bool hovRefresh = Hover( rl, rb, r, rt );
         sl_Rect( rl, rb, r, rt, hovRefresh ? sl_rowSel : sl_bg );
@@ -1931,7 +1892,6 @@ private:
         sl_Text( ( rl + r ) * .5, y, sl_small, tString( "\xe2\x86\xbb Refresh" ), sl_textHi, 0 );
         AddHit( rl, rb, r, rt, ACT_REFRESH );
 
-        // columns
         REAL const xName = l + .04, xMode = l + .60, xPlayers = l + .72, xBar = l + .82, barW = .09, xPing = r - .01;
         y -= .11;
         struct Column { char const * label; REAL x; int align; int key; };
@@ -1954,7 +1914,6 @@ private:
         y -= .045;
         sl_Line( l, y, r, y, sl_border );
 
-        // rows
         REAL const rowH = .075;
         REAL const listTop = y - .01;
         visibleRows_ = std::max( 1, int( ( listTop - ( bottom + .02 ) ) / rowH ) );
@@ -1982,11 +1941,9 @@ private:
             bool full = s.MaxUsers() > 0 && s.Users() >= s.MaxUsers();
             bool waiting = s.Polling() || !s.Reachable() || s.Compatibility() != nServerInfo::Compat_Ok;
 
-            // status dot
             gSLColor const & dot = waiting ? sl_textLow : ( full ? sl_orange : sl_accent );
             sl_Rect( l + .012, cy - .008, l + .024, cy + .008, dot );
 
-            // name and ranked badge
             tString name = sl_Plain( s.GetName() );
             bool ranked = sl_Ranked( s );
             tString badge = sl_Spaced( tString( "RANKED" ) );
@@ -2001,10 +1958,8 @@ private:
                 sl_Text( bl + bw * .5, cy, sl_small * .8, badge, sl_accent, 0 );
             }
 
-            // mode
             sl_Text( xMode, cy, sl_small, sl_ModeTag( s ), sl_textMid );
 
-            // players and fill bar
             if ( waiting )
             {
                 tString state = s.Polling() ? tString( "polling" ) : ( s.Reachable() ? tString( "incompatible" ) : tString( "unreachable" ) );
@@ -2019,7 +1974,6 @@ private:
                 sl_Rect( xBar, cy - .005, xBar + barW, cy + .005, sl_border );
                 sl_Rect( xBar, cy - .005, xBar + barW * fill, cy + .005, full ? sl_orange : sl_textMid );
 
-                // ping
                 int ping = int( s.Ping() * 1000 );
                 tString pingText;
                 pingText << ping;
@@ -2027,7 +1981,6 @@ private:
             }
         }
 
-        // scroll indicator
         if ( int( list_.size() ) > visibleRows_ )
         {
             REAL const trackT = listTop, trackB = bottom + .02;
@@ -2052,7 +2005,6 @@ private:
         kicker << sl_ModeTag( *s ) << " \xc2\xb7 " << ( s->Ping() < sl_nearPing ? "NEAR" : "FAR" );
         sl_Text( l, y, sl_small, sl_Spaced( kicker ), sl_accent );
 
-        // name, wrapped over at most two lines
         y -= .08;
         REAL const nameH = .062;
         std::string name = sl_Plain( s->GetName() );
@@ -2083,7 +2035,6 @@ private:
         address << s->GetConnectionName() << ":" << s->GetPort();
         sl_Text( l, y, sl_small, address, sl_textLow, -1, r - l );
 
-        // stats
         y -= .07;
         REAL const sb = y - .13;
         sl_Frame( l, sb, r, y, sl_border );
@@ -2106,7 +2057,6 @@ private:
         }
         y = sb - .07;
 
-        // settings
         sl_Text( l, y, sl_small, sl_Spaced( tString( "SETTINGS" ) ), sl_textMid );
         y -= .06;
         nServerInfo::SettingsDigest const & settings = s->GetSettings();
@@ -2134,7 +2084,6 @@ private:
             }
         }
 
-        // buttons
         REAL const bb = bottom + .06, bt = bottom + .16, jr = r - .12;
         bool canJoin = sl_Joinable( *s );
         bool hovJoin = canJoin && Hover( l, bb, jr, bt );
@@ -2152,7 +2101,6 @@ private:
         RenderEye( ( el + r ) * .5, ( bb + bt ) * .5, canJoin ? sl_textMid : sl_border );
         AddHit( el, bb, r, bt, ACT_SPECTATE );
 
-        // players on the server
         y -= .03;
         sl_Text( l, y, sl_small, sl_Spaced( tString( "PLAYERS" ) ), sl_textMid );
         y -= .06;
@@ -2259,7 +2207,7 @@ void gServerListItem::RenderBackground()
 
     sr_ResetRenderState( true );
 }
-} // namespace
+}
 
 static void sg_BrowseServerList()
 {

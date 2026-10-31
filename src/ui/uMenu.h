@@ -181,8 +181,6 @@ public:
     //! returns whether there is currently an active menu
     static bool MenuActive();
 
-    //! settings panel: menus entered between BeginPanel and EndPanel are drawn as
-    //! a panel on the right side of the screen, over the backdrop menu
     static void BeginPanel( uMenu * backdrop );
     static void EndPanel();
 protected:
@@ -198,25 +196,19 @@ protected:
     int GetNextSelectable(int start);
     int GetPrevSelectable(int start);
 
-    //! returns the selectable item at the given window position (in SDL mouse coordinates), or -1
     virtual int ItemAt(int x, int y);
 
-    //! renders the title and the items (not the help text)
     virtual void RenderItems();
 
-    //! renders the title
     void RenderTitle();
 
-    //! renders the menu in settings panel style
     void RenderPanel();
 
-    //! panel mouse and search handling; returns whether the event was used
     bool PanelEvent( SDL_Event & event );
 
-    REAL panelScroll_ = 0;        //!< how far the panel content is scrolled down
-    int panelLastSelected_ = -1;  //!< selection of the last frame, to follow keyboard moves
+    REAL panelScroll_ = 0;
+    int panelLastSelected_ = -1;
 
-    //! activates the selected item, like pressing Enter
     void EnterSelected();
 
     //! called every frame before the menu is rendered
@@ -292,23 +284,22 @@ public:
     virtual void Select() {}   // called when this item is selected and ready to set
     virtual void Deselect() {} // called when this item is deselected
 
-    //! how the item is shown in the settings panel
     enum PanelKind
     {
-        PANEL_CUSTOM,   //!< drawn by the item itself
-        PANEL_BUTTON,   //!< opens something
-        PANEL_CHOICE,   //!< value changed with left/right
-        PANEL_TOGGLE,   //!< on/off
-        PANEL_TEXT,     //!< text input
-        PANEL_KEYS,     //!< key bindings
-        PANEL_EXIT,     //!< leaves the menu
-        PANEL_DIVIDER   //!< space between groups
+        PANEL_CUSTOM,
+        PANEL_BUTTON,
+        PANEL_CHOICE,
+        PANEL_TOGGLE,
+        PANEL_TEXT,
+        PANEL_KEYS,
+        PANEL_EXIT,
+        PANEL_DIVIDER
     };
     virtual PanelKind GetPanelKind(){ return PANEL_CUSTOM; }
     virtual tString GetPanelLabel(){ return tString(); }
     virtual tString GetPanelValue(){ return tString(); }
-    virtual bool GetPanelState(){ return false; }   //!< on/off state of toggles
-    virtual int GetPanelCursor(){ return -1; }      //!< text cursor as byte offset, -1 for none
+    virtual bool GetPanelState(){ return false; }
+    virtual int GetPanelCursor(){ return -1; }
 
 protected:
     void SetColor( bool selected, REAL alpha );            //!< Sets the color of text output for this menuitem

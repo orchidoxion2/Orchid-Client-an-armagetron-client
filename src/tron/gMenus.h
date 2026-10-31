@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "uMenu.h"
 
 extern void  sg_PlayerMenu();
-extern void  sg_PlayerMenu(int Player); // settings of one local player, counted from 0
+extern void  sg_PlayerMenu(int Player);
 extern uMenu sg_screenMenu;
 void         sg_ConsoleInput(); // let the player enter one line of console input
 

@@ -92,7 +92,6 @@ void Label::Render()
         c<<m_caption;
     }
 
-    // horizontal alignment of the whole table
     float left = m_position.x;
     if (m_align >= 0) {
         float width = std::accumulate(coloumns.begin(), coloumns.end(), float()) + (maxlen > 0 ? (maxlen - 1)*m_size.x : 0);

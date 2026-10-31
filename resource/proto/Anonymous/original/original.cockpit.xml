@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
 <!DOCTYPE Resource SYSTEM "cockpit.dtd">
 
-<!-- Orchi Tron HUD: score and round on top, speed, rubber and brake below, map in the corner.
-     Coordinates go from -1 to 1 in both directions; laid out for 16:9 screens. -->
 <Resource type="aacockpit" name="standard" version="0.0.1" author="Anonymous" category="">
     <Cockpit version="0.0.1" coordinates="screen">
 
-        <!-- score box, top center -->
         <Rectangle camera="all">
             <Position x="0" y="0.931" />
             <Size width="0.093" height="0.048" />
@@ -55,7 +52,6 @@
             </Face>
         </Label>
 
-        <!-- frame rate and ping, top right -->
         <Label camera="all">
             <DataSet id="fps">
                 <AtomicData source="current_framerate" />
@@ -76,7 +72,6 @@
             </Face>
         </Label>
 
-        <!-- speed, bottom center -->
         <Label camera="all">
             <DataSet id="speed">
                 <AtomicData source="player_speed" precision="0" />
@@ -107,7 +102,6 @@
             </Face>
         </Label>
 
-        <!-- rubber, left of the speed -->
         <Label camera="all">
             <DataSet id="rubber">
                 <AtomicData source="player_rubber" precision="1" />
@@ -142,7 +136,6 @@
             <LineColor><Solid><Color r="0" g="0" b="0" alpha="0" /></Solid></LineColor>
         </BarGauge>
 
-        <!-- brake, right of the speed -->
         <Label camera="all">
             <DataSet id="brake">
                 <AtomicData source="player_brakes" precision="1" />
@@ -176,7 +169,6 @@
             <LineColor><Solid><Color r="0" g="0" b="0" alpha="0" /></Solid></LineColor>
         </BarGauge>
 
-        <!-- map, bottom right; 1 switches map modes -->
         <Rectangle camera="all">
             <Position x="0.833" y="-0.704" />
             <Size width="0.133" height="0.237" />

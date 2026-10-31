@@ -158,10 +158,8 @@ public:
 
 static gFloor GFLOOR;
 
-// menu background picture: 16:9, stored squeezed into 2048x1024
 static rFileTexture sg_menuBackground( rTextureGroups::TEX_FONT, "textures/menu/background.jpg", 0, 0 );
 
-// draws the background picture filling the screen without stretching it, then the logo
 static void MenuBackground(){
     sg_menuBackground.Select();
     if ( sg_menuBackground.Loaded() )

@@ -242,7 +242,6 @@ public:
 
 extern gGameSettings* sg_currentSettings;
 
-//! "ROUND 3/10" or "WARMUP" for the HUD; empty when unknown (network clients don't get the round counter)
 tString sg_RoundText();
 
 void rotate();
