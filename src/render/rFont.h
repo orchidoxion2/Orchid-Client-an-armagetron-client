@@ -99,7 +99,7 @@ class rTextField{
     int  parIndent;      // number of spaces to insert after automatic newline
     REAL left,top;       // top left corner of the console
     REAL cheight; // character dimensions
-    //    rFont *F;             // the font
+    sr_fontClass type_;  // what the text is for; the console can have its own font
     int  x,y,realx;      // current cursor position
     float nextx;          // x-coordinate the next char should go to for rendering
     float currentWidth;   //The current position where the next char will go to for caching

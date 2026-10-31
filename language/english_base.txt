@@ -2040,6 +2040,24 @@ name_gradient_colors_help		The gradient colors for the player name: six hex digi
 customization_leaderboard_text	HUD Leaderboard:
 customization_leaderboard_help	Shows all players sorted by score on the left side of the HUD while you play. Your own row is highlighted, players whose cycle is dead are dimmed.
 
+customization_chat_text		Chat Look
+customization_chat_help		Background color and opacity behind the chat, and the font of the chat text.
+customization_chat_background_text	Custom Chat Background:
+customization_chat_background_help	Use the color and opacity below behind the chat. Off: the usual black background.
+customization_chat_r_text	Background Red:
+customization_chat_g_text	Background Green:
+customization_chat_b_text	Background Blue:
+customization_chat_color_help	0 to 255. Used while Custom Chat Background is on.
+customization_chat_alpha_text	Background Opacity:
+customization_chat_alpha_help	0 is invisible, 1 is solid. Used while Custom Chat Background is on.
+customization_chat_font_text	Chat Font:
+customization_chat_font_help	The font of the chat and console text.
+customization_chat_font_0_text	Same as game
+customization_chat_font_1_text	Inter
+customization_chat_font_2_text	Armagetron Classic
+customization_chat_font_3_text	DejaVu Sans
+customization_chat_font_4_text	JetBrains Mono
+
 settings_experimental_text	Experimental
 settings_experimental_help	Features that are still being tried out.
 

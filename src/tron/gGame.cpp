@@ -2870,6 +2870,20 @@ void MainMenu(bool ingame){
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
 
+    uMenu chatLook("$customization_chat_text");
+    uMenuItemSelection<int> chatFont( &chatLook, "$customization_chat_font_text", "$customization_chat_font_help", sr_chatFont );
+    chatFont.NewChoice( "$customization_chat_font_0_text", "$customization_chat_font_help", 0 );
+    chatFont.NewChoice( "$customization_chat_font_1_text", "$customization_chat_font_help", 1 );
+    chatFont.NewChoice( "$customization_chat_font_2_text", "$customization_chat_font_help", 2 );
+    chatFont.NewChoice( "$customization_chat_font_3_text", "$customization_chat_font_help", 3 );
+    chatFont.NewChoice( "$customization_chat_font_4_text", "$customization_chat_font_help", 4 );
+    uMenuItemReal chatAlpha( &chatLook, "$customization_chat_alpha_text", "$customization_chat_alpha_help", sr_chatBackgroundAlpha, 0, 1, .05 );
+    uMenuItemInt chatB( &chatLook, "$customization_chat_b_text", "$customization_chat_color_help", sr_chatBackgroundColor[2], 0, 255, 5 );
+    uMenuItemInt chatG( &chatLook, "$customization_chat_g_text", "$customization_chat_color_help", sr_chatBackgroundColor[1], 0, 255, 5 );
+    uMenuItemInt chatR( &chatLook, "$customization_chat_r_text", "$customization_chat_color_help", sr_chatBackgroundColor[0], 0, 255, 5 );
+    uMenuItemToggle chatBackground( &chatLook, "$customization_chat_background_text", "$customization_chat_background_help", sr_chatBackground );
+    uMenuItemSubmenu chatLook_sm( &customization, &chatLook, "$customization_chat_help" );
+
     uMenuItemToggle leaderboard( &customization, "$customization_leaderboard_text",
                                  "$customization_leaderboard_help", sg_hudLeaderboard );
 

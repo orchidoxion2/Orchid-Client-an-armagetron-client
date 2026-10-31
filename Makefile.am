@@ -109,6 +109,8 @@ nobase_texture_DATA=textures/cycle_body.png textures/cycle_wheel.png textures/di
 	textures/tutorials/conquest/conquest.txt \
 	textures/Armagetronad.ttf \
 	textures/Inter-Medium.otf textures/Inter-OFL.txt \
+	textures/DejaVuSans.ttf textures/DejaVu-LICENSE.txt \
+	textures/JetBrainsMono-Regular.ttf textures/JetBrainsMono-LICENSE.txt \
 	textures/menu/play.png textures/menu/player.png textures/menu/help.png \
 	textures/menu/settings.png textures/menu/exit.png textures/menu/background.jpg
 

@@ -83,6 +83,15 @@ static tConfItem<int> sr_indentConf("CONSOLE_INDENT",sr_indent);
 float sr_chatLayer = 0.5;
 static tConfItem<float> sr_chatLayerConf("CHAT_LAYER",sr_chatLayer);
 
+bool sr_chatBackground = false;
+static tConfItem<bool> sr_chatBackgroundConf("CHAT_BACKGROUND",sr_chatBackground);
+int sr_chatBackgroundColor[3] = { 20, 10, 24 };
+static tConfItem<int> sr_chatBackgroundRConf("CHAT_BACKGROUND_R",sr_chatBackgroundColor[0]);
+static tConfItem<int> sr_chatBackgroundGConf("CHAT_BACKGROUND_G",sr_chatBackgroundColor[1]);
+static tConfItem<int> sr_chatBackgroundBConf("CHAT_BACKGROUND_B",sr_chatBackgroundColor[2]);
+float sr_chatBackgroundAlpha = 0.5;
+static tConfItem<float> sr_chatBackgroundAlphaConf("CHAT_BACKGROUND_ALPHA",sr_chatBackgroundAlpha);
+
 namespace
 {
 static tConfigMigration migrate([](tString const &savedInVersion){
@@ -198,10 +207,17 @@ void rConsole::Render(){
             static int lastIn  = currentIn;
             REAL predictBottom = lastBottom - ( lastTop - currentTop + currentIn - lastIn ) * out.GetCHeight();
 
-            if ( lastTop != currentTop || lastIn != currentIn )
+            // the look of the chat changed in the settings: draw it again
+            tString look;
+            look << sr_chatBackground << ' ' << sr_chatBackgroundColor[0] << ' ' << sr_chatBackgroundColor[1] << ' '
+                 << sr_chatBackgroundColor[2] << ' ' << sr_chatBackgroundAlpha << ' ' << sr_chatFont << ' ' << sr_chatLayer;
+            static tString lastLook = look;
+
+            if ( lastTop != currentTop || lastIn != currentIn || lastLook != look )
             {
                 lastTop = currentTop;
                 lastIn  = currentIn;
+                lastLook = look;
                 sr_consoleDisplayList.Clear();
             }
 
@@ -217,10 +233,17 @@ void rConsole::Render(){
             out.EnableLineWrap();
             out.SetIndent(sr_indent);
 
-            if( sr_alphaBlend && sr_chatLayer > 0 && predictBottom < out.GetTop() )
+            REAL const layer = sr_chatBackground ? sr_chatBackgroundAlpha : sr_chatLayer;
+            if( sr_alphaBlend && layer > 0 && predictBottom < out.GetTop() )
             {
                 RenderEnd();
-                glColor4f(0, 0, 0, sr_chatLayer);
+                if ( sr_chatBackground )
+                {
+                    auto channel = []( int value ){ return ( value < 0 ? 0 : ( value > 255 ? 255 : value ) ) / 255.0f; };
+                    glColor4f( channel( sr_chatBackgroundColor[0] ), channel( sr_chatBackgroundColor[1] ), channel( sr_chatBackgroundColor[2] ), layer );
+                }
+                else
+                    glColor4f(0, 0, 0, layer);
                 glRectf(-1,predictBottom-.4*out.GetCHeight(),1,1);
             }
 

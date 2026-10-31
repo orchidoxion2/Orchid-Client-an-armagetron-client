@@ -176,7 +176,10 @@ static tConfItem< float > sr_lineHeightconf( "LINE_HEIGHT", sr_lineHeight, &rest
 class rFontContainer : std::map<int, FTFont *> {
     FTFont &New(int size);
     FTFont *Load(tString const &path);
+    bool chat_;              // the font for the console text, set by CHAT_FONT
+    float sizeFactor_ = .8;  // guess, then improve
 public:
+    explicit rFontContainer( bool chat = false ): chat_( chat ){}
     void clear() {
         for(iterator i = begin(); i != end(); ++i) {
             delete i->second;
@@ -221,7 +224,7 @@ public:
         }
     }
     FTFont &GetFont(float height) {
-        static float size_factor = .8; // guess, then improve
+        float & size_factor = sizeFactor_;
         int size = int(height/sr_lineHeight*size_factor*sr_screenHeight/2.+.5);
         FTFont *ret;
         if(count(size)) {
@@ -277,6 +280,17 @@ static tConfItem<int> ufc("USE_CUSTOM_FONT", useCustomFont, &sr_ReloadFont);
 
 static rCallbackBeforeScreenModeChange reloadft(&sr_ReloadFont);
 
+// CHAT_FONT: 0 uses the game font, the others pick one of the fonts that come with the game
+static char const * const sr_chatFontFiles[] = { "", "Inter-Medium.otf", "Armagetronad.ttf", "DejaVuSans.ttf", "JetBrainsMono-Regular.ttf" };
+int sr_chatFont = 0;
+static tConfItem<int> sr_chatFontConf("CHAT_FONT", sr_chatFont, &sr_ReloadFont);
+
+static char const * sr_ChatFontFile()
+{
+    int const count = sizeof( sr_chatFontFiles ) / sizeof( sr_chatFontFiles[0] );
+    return sr_chatFont > 0 && sr_chatFont < count ? sr_chatFontFiles[ sr_chatFont ] : "";
+}
+
 FTFont *rFontContainer::Load(tString const &path) {
     FTFont *font;
     switch (sr_fontType) {
@@ -305,7 +319,9 @@ FTFont &rFontContainer::New(int size) {
     FTFont *font;
     tString theFontFile("");
 
-    if(useCustomFont == 1) {
+    if(chat_ && *sr_ChatFontFile()) {
+        theFontFile = tDirectories::Data().GetReadPath(tString("textures/") + sr_ChatFontFile());
+    } else if(useCustomFont == 1) {
         theFontFile = customFont;
     } else {
         theFontFile = "textures/" + ( fontFile == sr_oldDefaultFontFile ? tString(sr_defaultFontFile) : fontFile );
@@ -328,16 +344,30 @@ FTFont &rFontContainer::New(int size) {
     return *font;
 }
 rFontContainer sr_Font;
+static rFontContainer sr_ChatFont( true );
+
+static rFontContainer & sr_FontFor( sr_fontClass type )
+{
+    // the chat font was changed in the menu
+    static int loaded = sr_chatFont;
+    if ( loaded != sr_chatFont )
+    {
+        sr_ChatFont.clear();
+        loaded = sr_chatFont;
+    }
+    return type == sr_fontConsole && *sr_ChatFontFile() ? sr_ChatFont : sr_Font;
+}
 
 void sr_ReloadFont(void) {
     sr_Font.clear();
+    sr_ChatFont.clear();
 }
 #endif
 
 rTextField::rTextField(REAL Left,REAL Top,
                        REAL Cheight, sr_fontClass Type)
         :parIndent(0),
-left(Left),top(Top),cheight(Cheight),x(0),y(0),realx(0),nextx(Left),currentWidth(0),multiline(false),cursor(0),cursorPos(0){
+left(Left),top(Top),cheight(Cheight),type_(Type),x(0),y(0),realx(0),nextx(Left),currentWidth(0),multiline(false),cursor(0),cursorPos(0){
     if (cheight*sr_screenHeight<18)
         cheight=18/REAL(sr_screenHeight);
 
@@ -399,10 +429,10 @@ void rTextField::FlushLine(int len,bool newline){
     realx += len;
     if (len >= cursorPos && cursorPos >= 0) {
         cursor_y=realTop;
-        cursor_x=nextx+sr_Font.GetWidth(str.substr(0, cursorPos), cheight);
+        cursor_x=nextx+sr_FontFor(type_).GetWidth(str.substr(0, cursorPos), cheight);
     }
     cursorPos -= len+1;
-    float thisx = nextx+sr_Font.GetWidth(str, cheight);
+    float thisx = nextx+sr_FontFor(type_).GetWidth(str, cheight);
 
     REAL r = color_.r_;
     REAL g = color_.g_;
@@ -423,7 +453,7 @@ void rTextField::FlushLine(int len,bool newline){
 
                 float l,t,r,b;
 
-                sr_Font.BBox(str, cheight, tCoord(nextx, realTop-cheight), l, b, r, t);
+                sr_FontFor(type_).BBox(str, cheight, tCoord(nextx, realTop-cheight), l, b, r, t);
 
                 if(t > realTop) {
                     t = realTop;
@@ -455,7 +485,7 @@ void rTextField::FlushLine(int len,bool newline){
 
     //F->Render(buffer[realx],l,t,l+cwidth,t-cheight);
     glRasterPos2f(nextx, realTop-cheight);
-    sr_Font.Render(str, cheight, tCoord(nextx, realTop-cheight));
+    sr_FontFor(type_).Render(str, cheight, tCoord(nextx, realTop-cheight));
     nextx = thisx;
 
 #endif
@@ -564,7 +594,7 @@ rTextField & rTextField::StringOutput(const FTGL_CHAR * c, ColorMode colorMode)
             }
             // ( we don't need to worry about the isspace() tests, they'll fail)
 #endif
-            currentWidth += sr_Font.GetWidth(str, cheight);
+            currentWidth += sr_FontFor(type_).GetWidth(str, cheight);
             if(isspace(*c)) {
                 trouble = false;
             } else if ( currentWidth >= maxWidth) {
@@ -576,7 +606,7 @@ rTextField & rTextField::StringOutput(const FTGL_CHAR * c, ColorMode colorMode)
                     spaces += ' ';
                     cursorPos++;
                 }
-                currentWidth = sr_Font.GetWidth(spaces, cheight);
+                currentWidth = sr_FontFor(type_).GetWidth(spaces, cheight);
             }
         }
         // break line if next space character is too far away
@@ -616,7 +646,7 @@ rTextField & rTextField::StringOutput(const FTGL_CHAR * c, ColorMode colorMode)
                 sr_utf8216( str_in_utf8, str );
             }
 #endif
-            float wordWidth = sr_Font.GetWidth(str, cheight);
+            float wordWidth = sr_FontFor(type_).GetWidth(str, cheight);
 
             currentWidth += wordWidth;
             if ( currentWidth >= maxWidth)
@@ -631,7 +661,7 @@ rTextField & rTextField::StringOutput(const FTGL_CHAR * c, ColorMode colorMode)
                     spaces += ' ';
                     cursorPos++;
                 }
-                float spaceWidth = sr_Font.GetWidth(spaces, cheight);
+                float spaceWidth = sr_FontFor(type_).GetWidth(spaces, cheight);
 
                 if (wordWidth >= maxWidth) {
                     trouble = true;

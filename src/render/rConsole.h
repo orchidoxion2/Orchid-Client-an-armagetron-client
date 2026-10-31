@@ -39,6 +39,11 @@ extern REAL rCHEIGHT_CON;
 
 extern float sr_chatLayer;
 
+extern bool sr_chatBackground;          //!< CHAT_BACKGROUND: use the color and opacity below instead of CHAT_LAYER
+extern int sr_chatBackgroundColor[3];   //!< CHAT_BACKGROUND_R/G/B, 0 to 255
+extern float sr_chatBackgroundAlpha;    //!< CHAT_BACKGROUND_ALPHA, 0 to 1
+extern int sr_chatFont;                 //!< CHAT_FONT: 0 is the game font, 1 to 4 the fonts that come with the game
+
 class rConsole:public tConsole{
     tArray<tString> lines;
 
