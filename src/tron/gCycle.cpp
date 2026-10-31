@@ -4338,7 +4338,7 @@ void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * 
     {
         RenderEnd();
         glDisable( GL_TEXTURE_2D );
-        glLineWidth( 3 );
+        glLineWidth( 2 );
         for ( gNetPlayerWall * list: { wallsWithDisplayList_, wallList_ } )
             for ( gNetPlayerWall * run = list; run; run = run->Next() )
                 if ( run->BegPos() + EPS < run->EndPos() )

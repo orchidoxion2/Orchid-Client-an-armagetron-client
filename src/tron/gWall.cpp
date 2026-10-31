@@ -1105,12 +1105,12 @@ static void sg_TrailAgeColor( REAL age )
     if ( age < .5 )
     {
         REAL const f = age * 2;
-        Color( .25 + .75 * f, .9 - .05 * f, .3 - .15 * f, 1 );
+        Color( .2 + .45 * f, .55 - .02 * f, .25 - .1 * f, .6 );
     }
     else
     {
         REAL const f = age * 2 - 1;
-        Color( 1, .85 - .65 * f, .15, 1 );
+        Color( .65 + .05 * f, .53 - .35 * f, .15, .6 );
     }
 }
 
@@ -1136,7 +1136,7 @@ void gNetPlayerWall::RenderAgeLine()
 
     eCoord const P1 = EndPoint(0);
     eCoord const P2 = EndPoint(1);
-    REAL const z = sg_cycleTrailHeight + .35;
+    REAL const z = sg_cycleTrailHeight + .75;
 
     BeginLines();
     for ( int i = coords_.Len()-2; i >= 0; --i )
