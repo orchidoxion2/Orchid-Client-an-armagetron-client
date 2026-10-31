@@ -1107,7 +1107,7 @@ void gNetPlayerWall::RenderAgeLine()
 
     eCoord const P1 = EndPoint(0);
     eCoord const P2 = EndPoint(1);
-    REAL const z = sg_cycleTrailHeight + .1;
+    REAL const z = sg_cycleTrailHeight + .35;
 
     BeginLines();
     for ( int i = coords_.Len()-2; i >= 0; --i )

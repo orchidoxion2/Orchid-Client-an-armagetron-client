@@ -2850,6 +2850,14 @@ void MainMenu(bool ingame){
      "$misc_moviepack_help",sg_moviepackUse);
 
 
+    uMenu experimental("$settings_experimental_text");
+    uMenuItemToggle trailAgeLine
+    (&experimental,"$pref_trail_age_text",
+     "$pref_trail_age_help",sg_cycleTrailAgeLine);
+    uMenuItemSubmenu experimental_sm
+    (&Settings,&experimental,
+     "$settings_experimental_help");
+
     uMenu spotify("$settings_spotify_text");
     gSpotifyAccountItem spotifyAccount( &spotify );
     uMenuItemToggle spotifyLyrics
