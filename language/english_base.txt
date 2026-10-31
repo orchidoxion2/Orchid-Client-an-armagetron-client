@@ -2013,6 +2013,9 @@ settings_controls_camera_help	Keys for camera views and glancing of player \1.
 settings_customization_text	Customization
 settings_customization_help	Client features: HUD editor, leaderboard, chat look, name gradient and cycle colors.
 
+customization_color_overflow_text	Color Overflow:
+customization_color_overflow_help	Lets the red, green and blue settings in Player Setup go above 15. The game turns such values into mixed, overflowing colors on your cycle and trail. Servers can forbid it with BUG_COLOR_OVERFLOW. Switching this off sets colors above 15 back to 15.
+
 settings_experimental_text	Experimental
 settings_experimental_help	Features that are still being tried out.
 

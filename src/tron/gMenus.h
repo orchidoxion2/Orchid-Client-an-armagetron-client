@@ -32,6 +32,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 extern void  sg_PlayerMenu();
 extern void  sg_PlayerMenu(int Player);
+
+extern bool sg_colorOverflow;       //!< COLOR_OVERFLOW: color settings may go above 15
+void sg_ColorOverflowChanged();     //!< puts colors back to 15 at most once COLOR_OVERFLOW is off
 extern uMenu sg_screenMenu;
 void         sg_ConsoleInput(); // let the player enter one line of console input
 

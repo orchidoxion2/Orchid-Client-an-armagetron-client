@@ -2868,6 +2868,15 @@ void MainMenu(bool ingame){
 
     // items are listed bottom to top: the last one created shows first
     uMenu customization("$settings_customization_text");
+
+    class gColorOverflowItem: public uMenuItemToggle
+    {
+    public:
+        explicit gColorOverflowItem( uMenu * menu )
+            : uMenuItemToggle( menu, "$customization_color_overflow_text", "$customization_color_overflow_help", sg_colorOverflow ){}
+        void LeftRight( int dir ) override { uMenuItemToggle::LeftRight( dir ); sg_ColorOverflowChanged(); }
+        void Enter() override { uMenuItemToggle::Enter(); sg_ColorOverflowChanged(); }
+    } colorOverflow( &customization );
     uMenuItemSubmenu customization_sm
     (&Settings,&customization,
      "$settings_customization_help");

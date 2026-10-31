@@ -27,6 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "gMenus.h"
 #include "gWall.h"
+
+#include <algorithm>
 #include "ePlayer.h"
 #include "rScreen.h"
 #include "rTexture.h"
@@ -1114,6 +1116,23 @@ public:
 extern void Render(int);
 
 
+// lets the color settings go above 15; the game itself turns such colors into the overflow glitch
+bool sg_colorOverflow = false;
+static tConfItem<bool> sg_colorOverflowConf( "COLOR_OVERFLOW", sg_colorOverflow );
+
+void sg_ColorOverflowChanged()
+{
+    if ( sg_colorOverflow )
+        return;
+    for ( int i = MAX_PLAYERS - 1; i >= 0; --i )
+    {
+        ePlayer * player = ePlayer::PlayerConfig( i );
+        if ( player )
+            for ( int c = 0; c < 3; ++c )
+                player->rgb[c] = std::min( player->rgb[c], 15 );
+    }
+}
+
 class ArmageTron_color_menuitem:public uMenuItemInt{
 protected:
     int *rgb;
@@ -1121,7 +1140,7 @@ protected:
 public:
     ArmageTron_color_menuitem(uMenu *m,const char *tit,
                               const char *help, int *RGB,int Me)
-            :uMenuItemInt(m,tit,help,RGB[Me],0,15),
+            :uMenuItemInt(m,tit,help,RGB[Me],0,sg_colorOverflow ? 255 : 15),
     rgb(RGB),me(Me) {
         m->RequestSpaceBelow(.2);
     }
