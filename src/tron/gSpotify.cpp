@@ -36,6 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
@@ -656,6 +657,8 @@ struct sp_Shared
 
     std::string lyricsFor;
     std::vector< sp_LyricLine > lyricLines;
+    gSpotifyNowPlaying::LyricsState lyricsState = gSpotifyNowPlaying::LYRICS_SEARCHING;
+    sp_Clock::time_point lyricsRetry;
     int trackVersion = 0;
 
     std::string artUrl, artFor, artBytes;
@@ -739,30 +742,77 @@ static std::vector< sp_LyricLine > sp_ParseLrc( std::string const & lrc )
     return lines;
 }
 
-static std::vector< sp_LyricLine > sp_FetchLyrics( std::string const & title, std::string const & artist, std::string const & album, int durationMs )
+//! the title without additions Spotify has and LRCLIB often does not: " - Remastered 2011", " (feat. X)"
+static std::string sp_PlainTitle( std::string const & title )
+{
+    std::string plain = title;
+    size_t cut = plain.find( " - " );
+    if ( cut != std::string::npos && cut > 0 )
+        plain.erase( cut );
+    for ( char const * open: { " (", " [" } )
+    {
+        cut = plain.find( open );
+        if ( cut != std::string::npos && cut > 0 )
+            plain.erase( cut );
+    }
+    return plain;
+}
+
+static std::vector< sp_LyricLine > sp_FetchLyrics( std::string const & title, std::string const & artist, std::string const & album, int durationMs, gSpotifyNowPlaying::LyricsState & state )
 {
     std::vector< std::string > headers;
+    bool reached = false, failed = false;
+    auto request = [&]( std::string const & url, sp_Json & json )
+    {
+        sp_Response response = sp_Request( "GET", url, headers, std::string() );
+        if ( response.status == 200 || response.status == 404 )
+            reached = true;
+        else
+            failed = true;
+        json = response.status == 200 ? sp_Json::Parse( response.body ) : sp_Json();
+        return response.status == 200;
+    };
+
+    sp_Json json;
     std::ostringstream url;
     url << sp_LyricsBase() << "/api/get?track_name=" << sp_UrlEncode( title ) << "&artist_name=" << sp_UrlEncode( artist )
         << "&album_name=" << sp_UrlEncode( album ) << "&duration=" << ( durationMs + 500 ) / 1000;
-    sp_Response response = sp_Request( "GET", url.str(), headers, std::string() );
-    if ( response.status == 200 )
+    if ( request( url.str(), json ) && !json["syncedLyrics"].String().empty() )
     {
-        sp_Json json = sp_Json::Parse( response.body );
-        if ( !json["syncedLyrics"].String().empty() )
-            return sp_ParseLrc( json["syncedLyrics"].String() );
+        state = gSpotifyNowPlaying::LYRICS_FOUND;
+        return sp_ParseLrc( json["syncedLyrics"].String() );
     }
 
-    std::ostringstream search;
-    search << sp_LyricsBase() << "/api/search?track_name=" << sp_UrlEncode( title ) << "&artist_name=" << sp_UrlEncode( artist );
-    response = sp_Request( "GET", search.str(), headers, std::string() );
-    if ( response.status == 200 )
+    // search by title and artist, also with the plain title; prefer a version of about the same length
+    std::vector< std::string > titles( 1, title );
+    if ( sp_PlainTitle( title ) != title && !sp_PlainTitle( title ).empty() )
+        titles.push_back( sp_PlainTitle( title ) );
+    for ( std::string const & t: titles )
     {
-        sp_Json json = sp_Json::Parse( response.body );
+        std::ostringstream search;
+        search << sp_LyricsBase() << "/api/search?track_name=" << sp_UrlEncode( t ) << "&artist_name=" << sp_UrlEncode( artist );
+        if ( !request( search.str(), json ) )
+            continue;
+        int best = -1;
+        double bestDiff = 1E+30;
         for ( size_t i = 0; i < json.Size(); ++i )
-            if ( !json[i]["syncedLyrics"].String().empty() )
-                return sp_ParseLrc( json[i]["syncedLyrics"].String() );
+        {
+            if ( json[i]["syncedLyrics"].String().empty() )
+                continue;
+            double const diff = fabs( json[i]["duration"].Number() - durationMs / 1000.0 );
+            if ( best < 0 || diff < bestDiff )
+            {
+                best = int( i );
+                bestDiff = diff;
+            }
+        }
+        if ( best >= 0 )
+        {
+            state = gSpotifyNowPlaying::LYRICS_FOUND;
+            return sp_ParseLrc( json[ size_t( best ) ]["syncedLyrics"].String() );
+        }
     }
+    state = failed && !reached ? gSpotifyNowPlaying::LYRICS_UNREACHABLE : gSpotifyNowPlaying::LYRICS_NONE;
     return std::vector< sp_LyricLine >();
 }
 
@@ -1040,16 +1090,26 @@ static void sp_Worker()
         }
         s.artUrl = artUrl;
 
+        // the lyrics service could not be reached: try again after a while
+        if ( s.lyricsFor == id && s.lyricsState == gSpotifyNowPlaying::LYRICS_UNREACHABLE && sp_Clock::now() > s.lyricsRetry )
+            s.lyricsFor.clear();
+
         if ( s.lyrics && s.lyricsFor != id )
         {
             std::string title = s.title, artist = item["artists"][size_t( 0 )]["name"].String(), album = s.album;
             int duration = s.durationMs;
             s.lyricsFor = id;
+            s.lyricsState = gSpotifyNowPlaying::LYRICS_SEARCHING;
             lock.unlock();
-            std::vector< sp_LyricLine > lines = sp_FetchLyrics( title, artist, album, duration );
+            gSpotifyNowPlaying::LyricsState state = gSpotifyNowPlaying::LYRICS_NONE;
+            std::vector< sp_LyricLine > lines = sp_FetchLyrics( title, artist, album, duration, state );
             lock.lock();
             if ( s.lyricsFor == id )
+            {
                 s.lyricLines.swap( lines );
+                s.lyricsState = state;
+                s.lyricsRetry = sp_Clock::now() + std::chrono::seconds( 20 );
+            }
         }
 
         if ( s.artFor != id && !s.artUrl.empty() )
@@ -1257,6 +1317,7 @@ bool gSpotify::NowPlaying( gSpotifyNowPlaying & info, bool withLines )
         info.progressMs = std::min( info.progressMs, info.durationMs );
     info.showLyrics = s.lyrics;
     info.trackVersion = s.trackVersion;
+    info.lyricsState = s.lyricsFor.empty() ? gSpotifyNowPlaying::LYRICS_SEARCHING : s.lyricsState;
     if ( withLines )
     {
         info.lines.clear();

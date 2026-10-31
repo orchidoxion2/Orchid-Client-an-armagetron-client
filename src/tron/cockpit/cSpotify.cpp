@@ -403,8 +403,18 @@ void Spotify::RenderCard( gSpotifyNowPlaying const & info, REAL alpha )
 
 void Spotify::RenderLyrics( gSpotifyNowPlaying const & info, REAL alpha, REAL dt )
 {
-    if ( !info.showLyrics || info.lines.empty() )
+    if ( !info.showLyrics )
         return;
+    if ( info.lines.empty() )
+    {
+        // say why there is nothing to show
+        char const * const message = info.lyricsState == gSpotifyNowPlaying::LYRICS_SEARCHING ? "Looking for lyrics\xe2\x80\xa6" :
+                                     info.lyricsState == gSpotifyNowPlaying::LYRICS_UNREACHABLE ? "Lyrics service unreachable, trying again soon" :
+                                     "No synced lyrics for this song";
+        REAL const A = m_size.y;
+        cs_Text( m_position.x, m_position.y - A * 1.45f, A * .19f, tString( message ), tColor( .8, .75, .82, .55 * alpha ), -1, m_size.x );
+        return;
+    }
 
     cs_Pixel const px;
     REAL const A = m_size.y;
@@ -461,7 +471,7 @@ void Spotify::RenderLyrics( gSpotifyNowPlaying const & info, REAL alpha, REAL dt
         int const d = i - current;
         REAL const dim = d == -1 ? .3 : ( d == 1 ? .5 : ( d == 2 ? .32 : ( d == 3 ? .18 : 0 ) ) );
         REAL a = dim + ( 1 - dim ) * m_emphasis[i];
-        a *= cs_Clamp( 1 - ( lineTop - top ) / ( small * 1.5 ), 0, 1 );
+        a *= cs_Clamp( 1 - ( lineTop - top ) / ( small * .8f ), 0, 1 );
         a *= cs_Clamp( ( lineBottom - bottom ) / ( small * 1.5 ) + 1, 0, 1 );
         a *= alpha;
         if ( a <= .01 )
