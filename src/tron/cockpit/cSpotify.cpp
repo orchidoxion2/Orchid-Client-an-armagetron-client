@@ -408,11 +408,17 @@ void Spotify::RenderLyrics( gSpotifyNowPlaying const & info, REAL alpha, REAL dt
     if ( info.lines.empty() )
     {
         // say why there is nothing to show
-        char const * const message = info.lyricsState == gSpotifyNowPlaying::LYRICS_SEARCHING ? "Looking for lyrics\xe2\x80\xa6" :
-                                     info.lyricsState == gSpotifyNowPlaying::LYRICS_UNREACHABLE ? "Lyrics service unreachable, trying again soon" :
-                                     "No synced lyrics for this song";
+        tString message( info.lyricsState == gSpotifyNowPlaying::LYRICS_SEARCHING ? "Looking for lyrics\xe2\x80\xa6" :
+                         info.lyricsState == gSpotifyNowPlaying::LYRICS_UNREACHABLE ? "Lyrics service unreachable" :
+                         "No synced lyrics for this song" );
+        if ( info.lyricsState == gSpotifyNowPlaying::LYRICS_UNREACHABLE )
+        {
+            if ( !info.lyricsError.empty() )
+                message << " (" << info.lyricsError << ")";
+            message << ", trying again soon";
+        }
         REAL const A = m_size.y;
-        cs_Text( m_position.x, m_position.y - A * 1.45f, A * .19f, tString( message ), tColor( .8, .75, .82, .55 * alpha ), -1, m_size.x );
+        cs_Text( m_position.x, m_position.y - A * 1.45f, A * .19f, message, tColor( .8, .75, .82, .55 * alpha ), -1, m_size.x );
         return;
     }
 

@@ -47,6 +47,7 @@ struct gSpotifyNowPlaying
     bool showLyrics = false;
     enum LyricsState { LYRICS_SEARCHING, LYRICS_FOUND, LYRICS_NONE, LYRICS_UNREACHABLE };
     LyricsState lyricsState = LYRICS_SEARCHING;
+    tString lyricsError;        //!< why the lyrics service could not be reached
     std::vector< Line > lines;  //!< synced lyrics, sorted by time; empty if there are none
     int trackVersion = 0;       //!< changes with every new song
 };

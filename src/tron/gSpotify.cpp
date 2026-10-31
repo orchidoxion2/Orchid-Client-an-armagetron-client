@@ -490,6 +490,7 @@ struct sp_Response
     long status = 0;
     std::string body;
     int retryAfter = 0;
+    std::string error;   //!< why there is no answer, for the player
 };
 
 #ifdef WIN32
@@ -505,7 +506,7 @@ static std::wstring sp_Wide( std::string const & s )
     return w;
 }
 
-static sp_Response sp_Request( char const * method, std::string const & url, std::vector< std::string > const & headers, std::string const & body )
+static sp_Response sp_Request( char const * method, std::string const & url, std::vector< std::string > const & headers, std::string const & body, long timeout = 10 )
 {
     sp_Response ret;
     std::wstring wurl = sp_Wide( url );
@@ -526,8 +527,9 @@ static sp_Response sp_Request( char const * method, std::string const & url, std
     HINTERNET session = WinHttpOpen( sp_Wide( sp_userAgent ).c_str(), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0 );
     if ( !session )
         return ret;
-    WinHttpSetTimeouts( session, 8000, 8000, 10000, 10000 );
+    WinHttpSetTimeouts( session, 8000, 8000, int( timeout * 1000 ), int( timeout * 1000 ) );
     HINTERNET connection = WinHttpConnect( session, host, parts.nPort, 0 );
+    ret.error = "could not connect";
     HINTERNET request = connection ? WinHttpOpenRequest( connection, sp_Wide( method ).c_str(), target.c_str(), NULL, WINHTTP_NO_REFERER,
                                                          WINHTTP_DEFAULT_ACCEPT_TYPES, parts.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0 ) : NULL;
     if ( request )
@@ -540,6 +542,7 @@ static sp_Response sp_Request( char const * method, std::string const & url, std
                                  body.empty() ? WINHTTP_NO_REQUEST_DATA : const_cast< char * >( body.data() ), DWORD( body.size() ), DWORD( body.size() ), 0 ) &&
              WinHttpReceiveResponse( request, NULL ) )
         {
+            ret.error.clear();
             DWORD status = 0, size = sizeof( status );
             WinHttpQueryHeaders( request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &status, &size, WINHTTP_NO_HEADER_INDEX );
             ret.status = status;
@@ -556,6 +559,17 @@ static sp_Response sp_Request( char const * method, std::string const & url, std
                     break;
                 ret.body.append( chunk.data(), read );
             }
+        }
+        if ( !ret.error.empty() )
+        {
+            DWORD const code = GetLastError();
+            ret.error = code == ERROR_WINHTTP_TIMEOUT ? "timed out" :
+                        code == ERROR_WINHTTP_NAME_NOT_RESOLVED ? "server name not found" :
+                        code == ERROR_WINHTTP_CANNOT_CONNECT ? "could not connect" :
+                        code == ERROR_WINHTTP_SECURE_FAILURE ? "secure connection failed" : "network error";
+            char number[32];
+            snprintf( number, sizeof( number ), " %lu", static_cast< unsigned long >( code ) );
+            ret.error += number;
         }
         WinHttpCloseHandle( request );
     }
@@ -581,7 +595,7 @@ static size_t sp_CurlHeader( char * data, size_t size, size_t count, void * targ
     return size * count;
 }
 
-static sp_Response sp_Request( char const * method, std::string const & url, std::vector< std::string > const & headers, std::string const & body )
+static sp_Response sp_Request( char const * method, std::string const & url, std::vector< std::string > const & headers, std::string const & body, long timeout = 10 )
 {
     sp_Response ret;
     CURL * curl = curl_easy_init();
@@ -594,7 +608,7 @@ static sp_Response sp_Request( char const * method, std::string const & url, std
     curl_easy_setopt( curl, CURLOPT_USERAGENT, sp_userAgent );
     curl_easy_setopt( curl, CURLOPT_NOSIGNAL, 1L );
     curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, 8L );
-    curl_easy_setopt( curl, CURLOPT_TIMEOUT, 10L );
+    curl_easy_setopt( curl, CURLOPT_TIMEOUT, timeout );
     curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
     curl_easy_setopt( curl, CURLOPT_HTTPHEADER, list );
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, sp_CurlWrite );
@@ -603,8 +617,11 @@ static sp_Response sp_Request( char const * method, std::string const & url, std
     curl_easy_setopt( curl, CURLOPT_HEADERDATA, &ret.retryAfter );
     if ( strcmp( method, "POST" ) == 0 )
         curl_easy_setopt( curl, CURLOPT_COPYPOSTFIELDS, body.c_str() );
-    if ( curl_easy_perform( curl ) == CURLE_OK )
+    CURLcode const result = curl_easy_perform( curl );
+    if ( result == CURLE_OK )
         curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &ret.status );
+    else
+        ret.error = curl_easy_strerror( result );
     curl_slist_free_all( list );
     curl_easy_cleanup( curl );
     return ret;
@@ -612,9 +629,11 @@ static sp_Response sp_Request( char const * method, std::string const & url, std
 
 #else
 
-static sp_Response sp_Request( char const *, std::string const &, std::vector< std::string > const &, std::string const & )
+static sp_Response sp_Request( char const *, std::string const &, std::vector< std::string > const &, std::string const &, long = 10 )
 {
-    return sp_Response();
+    sp_Response ret;
+    ret.error = "no web support in this build";
+    return ret;
 }
 
 #endif
@@ -655,7 +674,7 @@ struct sp_Shared
     bool playing = false;
     sp_Clock::time_point progressTime;
 
-    std::string lyricsFor;
+    std::string lyricsFor, lyricsError;
     std::vector< sp_LyricLine > lyricLines;
     gSpotifyNowPlaying::LyricsState lyricsState = gSpotifyNowPlaying::LYRICS_SEARCHING;
     sp_Clock::time_point lyricsRetry;
@@ -758,17 +777,28 @@ static std::string sp_PlainTitle( std::string const & title )
     return plain;
 }
 
-static std::vector< sp_LyricLine > sp_FetchLyrics( std::string const & title, std::string const & artist, std::string const & album, int durationMs, gSpotifyNowPlaying::LyricsState & state )
+static std::vector< sp_LyricLine > sp_FetchLyrics( std::string const & title, std::string const & artist, std::string const & album, int durationMs, gSpotifyNowPlaying::LyricsState & state, std::string & error )
 {
     std::vector< std::string > headers;
     bool reached = false, failed = false;
     auto request = [&]( std::string const & url, sp_Json & json )
     {
-        sp_Response response = sp_Request( "GET", url, headers, std::string() );
+        // LRCLIB can take a while when it has to look a song up elsewhere first
+        sp_Response response = sp_Request( "GET", url, headers, std::string(), 25 );
         if ( response.status == 200 || response.status == 404 )
             reached = true;
         else
+        {
             failed = true;
+            if ( response.status != 0 )
+            {
+                char code[32];
+                snprintf( code, sizeof( code ), "HTTP %ld", response.status );
+                error = code;
+            }
+            else
+                error = response.error;
+        }
         json = response.status == 200 ? sp_Json::Parse( response.body ) : sp_Json();
         return response.status == 200;
     };
@@ -1102,12 +1132,14 @@ static void sp_Worker()
             s.lyricsState = gSpotifyNowPlaying::LYRICS_SEARCHING;
             lock.unlock();
             gSpotifyNowPlaying::LyricsState state = gSpotifyNowPlaying::LYRICS_NONE;
-            std::vector< sp_LyricLine > lines = sp_FetchLyrics( title, artist, album, duration, state );
+            std::string error;
+            std::vector< sp_LyricLine > lines = sp_FetchLyrics( title, artist, album, duration, state, error );
             lock.lock();
             if ( s.lyricsFor == id )
             {
                 s.lyricLines.swap( lines );
                 s.lyricsState = state;
+                s.lyricsError = error;
                 s.lyricsRetry = sp_Clock::now() + std::chrono::seconds( 20 );
             }
         }
@@ -1318,6 +1350,7 @@ bool gSpotify::NowPlaying( gSpotifyNowPlaying & info, bool withLines )
     info.showLyrics = s.lyrics;
     info.trackVersion = s.trackVersion;
     info.lyricsState = s.lyricsFor.empty() ? gSpotifyNowPlaying::LYRICS_SEARCHING : s.lyricsState;
+    info.lyricsError = tColoredString::RemoveColors( s.lyricsError.c_str() );
     if ( withLines )
     {
         info.lines.clear();
