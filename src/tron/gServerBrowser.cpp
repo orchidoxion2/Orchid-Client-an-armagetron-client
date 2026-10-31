@@ -1173,18 +1173,18 @@ gServerStartMenuItem::~gServerStartMenuItem()
 
 namespace
 {
-// palette
+// orchid palette: plum backgrounds, petal pink text, orchid pink accent, golden center for warnings
 struct gSLColor { REAL r, g, b, a; };
-const gSLColor sl_bg      = { .051, .067, .090, 1 };
-const gSLColor sl_panel   = { .067, .086, .110, 1 };
-const gSLColor sl_border  = { .130, .157, .192, 1 };
-const gSLColor sl_rowSel  = { .102, .125, .157, 1 };
-const gSLColor sl_rowHov  = { .082, .102, .129, 1 };
-const gSLColor sl_textHi  = { .902, .929, .953, 1 };
-const gSLColor sl_textMid = { .545, .580, .620, 1 };
-const gSLColor sl_textLow = { .353, .388, .431, 1 };
-const gSLColor sl_accent  = { .302, .847, .910, 1 };
-const gSLColor sl_orange  = { .941, .627, .188, 1 };
+const gSLColor sl_bg      = { .071, .035, .086, 1 };
+const gSLColor sl_panel   = { .102, .059, .122, 1 };
+const gSLColor sl_border  = { .227, .125, .243, 1 };
+const gSLColor sl_rowSel  = { .188, .094, .204, 1 };
+const gSLColor sl_rowHov  = { .141, .075, .161, 1 };
+const gSLColor sl_textHi  = { .969, .886, .937, 1 };
+const gSLColor sl_textMid = { .769, .627, .729, 1 };
+const gSLColor sl_textLow = { .588, .463, .569, 1 };
+const gSLColor sl_accent  = { .839, .251, .624, 1 };
+const gSLColor sl_orange  = { .961, .780, .416, 1 };
 
 const REAL sl_small = .040, sl_body = .046, sl_big = .075;
 
@@ -2140,7 +2140,7 @@ private:
         bool hovJoin = canJoin && Hover( l, bb, jr, bt );
         gSLColor joinColor = canJoin ? sl_accent : sl_border;
         if ( hovJoin )
-            joinColor = gSLColor{ .45, .9, .95, 1 };
+            joinColor = gSLColor{ .918, .412, .737, 1 };
         sl_Rect( l, bb, jr, bt, joinColor );
         sl_Text( ( l + jr ) * .5, ( bb + bt ) * .5, sl_body, sl_Spaced( tString( "JOIN SERVER" ) ), sl_bg, 0 );
         AddHit( l, bb, jr, bt, ACT_JOIN );

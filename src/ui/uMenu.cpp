@@ -701,19 +701,20 @@ void uMenu::RenderTitle()
 #ifndef DEDICATED
 namespace
 {
+// orchid palette: plum backgrounds, petal pink text, orchid pink accent
 struct uPanelColor { REAL r, g, b, a; };
-const uPanelColor pn_dim         = { 0, 0, 0, .55 };
-const uPanelColor pn_rail        = { .094, .090, .122, 1 };
-const uPanelColor pn_railHover   = { .125, .120, .160, 1 };
-const uPanelColor pn_railActive  = { .157, .150, .200, 1 };
-const uPanelColor pn_content     = { .141, .133, .176, 1 };
-const uPanelColor pn_row         = { .176, .169, .224, 1 };
-const uPanelColor pn_rowHover    = { .220, .212, .282, 1 };
-const uPanelColor pn_chip        = { .106, .102, .133, 1 };
-const uPanelColor pn_text        = { .922, .918, .961, 1 };
-const uPanelColor pn_textDim     = { .600, .590, .680, 1 };
-const uPanelColor pn_textLow     = { .430, .420, .510, 1 };
-const uPanelColor pn_accent      = { .910, .353, .627, 1 };
+const uPanelColor pn_dim         = { .039, .016, .047, .6 };
+const uPanelColor pn_rail        = { .078, .043, .098, 1 };
+const uPanelColor pn_railHover   = { .125, .071, .149, 1 };
+const uPanelColor pn_railActive  = { .173, .090, .196, 1 };
+const uPanelColor pn_content     = { .110, .063, .129, 1 };
+const uPanelColor pn_row         = { .157, .090, .180, 1 };
+const uPanelColor pn_rowHover    = { .220, .122, .247, 1 };
+const uPanelColor pn_chip        = { .071, .039, .086, 1 };
+const uPanelColor pn_text        = { .969, .886, .937, 1 };
+const uPanelColor pn_textDim     = { .769, .627, .729, 1 };
+const uPanelColor pn_textLow     = { .588, .463, .569, 1 };
+const uPanelColor pn_accent      = { .839, .251, .624, 1 };
 
 const REAL pn_small = .040, pn_body = .046, pn_title = .075;
 

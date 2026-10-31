@@ -137,9 +137,9 @@ void rConsole::Render(){
     }
     else
     {
-        // 20 pixel font, a bit bigger than the HUD texts
-        rCHEIGHT_CON=20*2.0/H;
-        rCWIDTH_CON=10*2.0/W;
+        // 26 pixel font, easy to read while playing
+        rCHEIGHT_CON=26*2.0/H;
+        rCWIDTH_CON=13*2.0/W;
 
         // but don't make it more than MAX_ROWS of text rows for the whole screen, more may be too small for hires small screens
         constexpr auto MAX_ROWS = 56;
