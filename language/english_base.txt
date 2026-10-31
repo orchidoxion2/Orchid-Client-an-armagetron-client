@@ -2577,6 +2577,8 @@ pref_lowersky_help		Toggles the display of the lower sky plane, a plasma cloud. 
 pref_uppersky_text		Upper Sky:
 pref_uppersky_help		Toggles the display of the upper sky, a solid plane similar to the floor. Turning both sky planes on hurts performance.
 
+pref_pathfinder_text		Pathfinder:
+pref_pathfinder_help		This is an experimental feature, using this feature in ranked matches may be prohibited and could get you banned. Draws the safest route for your cycle on the floor: green with plenty of room, yellow to red when it gets tight. Switches itself off on ranked servers (RCL and The Grid).
 pref_trail_age_text		Trail Age Line:
 pref_trail_age_help		This is an experimental feature, using this feature in ranked matches may be prohibited and could get you banned.
 pref_trail_height_text		Trail Height:

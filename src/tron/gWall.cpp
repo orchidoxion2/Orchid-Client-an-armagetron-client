@@ -1069,6 +1069,35 @@ void gNetPlayerWall::RenderList(bool list, gWallRenderMode renderMode ){
 }
 
 
+#endif
+
+void gNetPlayerWall::BlockingSegments( std::vector< std::pair< eCoord, eCoord > > & segments ) const
+{
+    if ( !cycle_ )
+        return;
+    if ( !cycle_->Alive() && gCycle::WallsStayUpDelay() >= 0 && se_GameTime() - cycle_->DeathTime() >= gCycle::WallsStayUpDelay() )
+        return;
+    REAL const length = cycle_->ThisWallsLength();
+    REAL const cut = gCycle::WallsLength() > 0 && length > 0 ? cycle_->GetDistance() - length : -1E+30;
+    eCoord const P1 = EndPoint(0);
+    eCoord const P2 = EndPoint(1);
+    for ( int i = coords_.Len()-2; i >= 0; --i )
+    {
+        if ( !coords_(i).IsDangerous )
+            continue;
+        REAL pa = coords_(i).Pos;
+        REAL pe = coords_(i+1).Pos;
+        if ( pa > pe )
+            Swap( pa, pe );
+        if ( pe <= cut )
+            continue;
+        if ( pa < cut )
+            pa = cut;
+        segments.push_back( std::make_pair( P1 + ( P2 - P1 ) * Alpha( pa ), P1 + ( P2 - P1 ) * Alpha( pe ) ) );
+    }
+}
+
+#ifndef DEDICATED
 // green for a fresh trail, yellow halfway, red where it is about to vanish
 static void sg_TrailAgeColor( REAL age )
 {

@@ -99,6 +99,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "gArena.h"
 #include "gSpotify.h"
+#include "gPathFinder.h"
 gArena Arena;
 
 static gTutorialBase * sg_tutorial = NULL;
@@ -1705,6 +1706,10 @@ bool ConnectToServerCore(nServerInfoBase *server)
     sr_SetWindowTitle(tOutput("$window_title_connecting",
         tColoredString::RemoveColors(server->GetName())));
 
+    // assist features switch themselves off while connected to a ranked server
+    gServerBrowser::SetRankedServer( gServerBrowser::IsRanked( *server ) );
+    struct RankedReset { ~RankedReset(){ gServerBrowser::SetRankedServer( false ); } } rankedReset;
+
     ePlayerNetID::ClearAll();
 
     // revert to default settings, restore current vlaues on exit
@@ -2851,6 +2856,9 @@ void MainMenu(bool ingame){
 
 
     uMenu experimental("$settings_experimental_text");
+    uMenuItemToggle pathFinder
+    (&experimental,"$pref_pathfinder_text",
+     "$pref_pathfinder_help",gPathFinder::Enabled());
     uMenuItemToggle trailAgeLine
     (&experimental,"$pref_trail_age_text",
      "$pref_trail_age_help",sg_cycleTrailAgeLine);

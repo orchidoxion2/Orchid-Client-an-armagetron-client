@@ -31,6 +31,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #define HUD_MAP
 
+#include <utility>
+#include <vector>
+
 #include "eAdvWall.h"
 #include "nNetObject.h"
 #include "gExplosion.h"
@@ -249,6 +252,10 @@ public:
     // virtual void Render(const eCamera *cam);
     void RenderList(bool list, gWallRenderMode );
     void RenderAgeLine();  //!< the trail age line, drawn every frame outside the display lists
+#endif
+    //! the parts of this trail that currently block, as pairs of end points
+    void BlockingSegments( std::vector< std::pair< eCoord, eCoord > > & segments ) const;
+#ifndef DEDICATED
     virtual void RenderNormal(const eCoord &x1,const eCoord &x2,REAL ta,REAL te,REAL r,REAL g,REAL b,REAL a, gWallRenderMode mode );
     virtual void RenderBegin(const eCoord &x1,const eCoord &x2,REAL ta,REAL te,REAL ra,REAL rb,REAL r,REAL g,REAL b,REAL a, gWallRenderMode mode );
 #endif

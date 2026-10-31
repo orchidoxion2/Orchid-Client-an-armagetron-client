@@ -123,6 +123,7 @@ class gCycleChatBot;
 class gCycleWallsDisplayListManager
 {
     friend class gNetPlayerWall;
+    friend class gCycle;
 
 public:
     gCycleWallsDisplayListManager();
@@ -340,6 +341,11 @@ public:
 
     eCoord CamPos() const override;
     eCoord PredictPosition() const override;
+
+#ifndef DEDICATED
+    //! the parts of this cycle's trail that currently block, as pairs of end points
+    void BlockingSegments( std::vector< std::pair< eCoord, eCoord > > & segments ) const;
+#endif
     eCoord  CamTop() const override;
     eCoord CamDir() const override;
     eCoord Direction() const override;

@@ -1158,6 +1158,51 @@ gServerStartMenuItem::~gServerStartMenuItem()
 }
 
 
+// ranked servers: the Retrocycles League (RCL) and The Grid
+bool gServerBrowser::IsRankedName( tString const & name )
+{
+    tString n = tColoredString::RemoveColors( name, false );
+    tString lower = n.ToLower();
+    if ( lower.find( "retrocycles league" ) != std::string::npos ||
+         lower.find( "the grid" ) != std::string::npos ||
+         lower.find( "thegrid" ) != std::string::npos )
+        return true;
+    for ( size_t pos = n.find( "RCL" ); pos != std::string::npos; pos = n.find( "RCL", pos + 1 ) )
+    {
+        bool letterBefore = pos > 0 && isalpha( static_cast<unsigned char>( n[pos-1] ) );
+        bool letterAfter = pos + 3 < n.size() && isalpha( static_cast<unsigned char>( n[pos+3] ) );
+        if ( !letterBefore && !letterAfter )
+            return true;
+    }
+    return false;
+}
+
+bool gServerBrowser::IsRanked( nServerInfoBase const & server )
+{
+    if ( IsRankedName( server.GetName() ) )
+        return true;
+
+    // bookmarks and custom connects carry the user's name for the server: look up its real one
+    for ( nServerInfo * known = nServerInfo::GetFirstServer(); known; known = known->Next() )
+        if ( known->GetPort() == server.GetPort() &&
+             known->GetConnectionName().ToLower() == server.GetConnectionName().ToLower() &&
+             IsRankedName( known->GetName() ) )
+            return true;
+    return false;
+}
+
+static bool sg_onRankedServer = false;
+
+bool gServerBrowser::OnRankedServer()
+{
+    return sg_onRankedServer;
+}
+
+void gServerBrowser::SetRankedServer( bool ranked )
+{
+    sg_onRankedServer = ranked;
+}
+
 #ifndef DEDICATED
 #include "ePlayer.h"
 #include "gMenus.h"
@@ -1307,17 +1352,7 @@ gSLMode sl_Mode( nServerInfo const & s )
 
 bool sl_Ranked( nServerInfo const & s )
 {
-    tString n = sl_Plain( s.GetName() );
-    if ( sl_Contains( n.ToLower(), "retrocycles league" ) )
-        return true;
-    for ( size_t pos = n.find( "RCL" ); pos != std::string::npos; pos = n.find( "RCL", pos + 1 ) )
-    {
-        bool letterBefore = pos > 0 && isalpha( static_cast<unsigned char>( n[pos-1] ) );
-        bool letterAfter = pos + 3 < n.size() && isalpha( static_cast<unsigned char>( n[pos+3] ) );
-        if ( !letterBefore && !letterAfter )
-            return true;
-    }
-    return false;
+    return gServerBrowser::IsRankedName( s.GetName() );
 }
 
 bool sl_Joinable( nServerInfo const & s )

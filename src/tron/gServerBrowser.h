@@ -28,6 +28,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef ArmageTron_ServerBrowser_H
 #define ArmageTron_ServerBrowser_H
 
+#include "tString.h"
+
 class nServerInfo;
 class nServerInfoBase;
 
@@ -42,6 +44,11 @@ public:
     static void ConfigurationMenu();    // browser configuration menu
 
     static nServerInfoBase * CurrentMaster(); // the currently active master server
+
+    static bool IsRankedName( tString const & name );          // a ranked server by its name: RCL or The Grid
+    static bool IsRanked( nServerInfoBase const & server );    // a ranked server, also when joined by bookmark or address
+    static bool OnRankedServer();                              // connected to a ranked server right now
+    static void SetRankedServer( bool ranked );
 
     static int lowPort, highPort;
 };
