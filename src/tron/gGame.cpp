@@ -2866,6 +2866,12 @@ void MainMenu(bool ingame){
     (&Settings,&experimental,
      "$settings_experimental_help");
 
+    // items are listed bottom to top: the last one created shows first
+    uMenu customization("$settings_customization_text");
+    uMenuItemSubmenu customization_sm
+    (&Settings,&customization,
+     "$settings_customization_help");
+
     uMenu spotify("$settings_spotify_text");
     gSpotifyAccountItem spotifyAccount( &spotify );
     uMenuItemToggle spotifyLyrics

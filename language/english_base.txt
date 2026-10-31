@@ -2010,6 +2010,9 @@ settings_controls_player_help	Keys for turning, braking and the other driving ac
 settings_controls_camera_text	Player \1 Camera Controls
 settings_controls_camera_help	Keys for camera views and glancing of player \1.
 
+settings_customization_text	Customization
+settings_customization_help	Client features: HUD editor, leaderboard, chat look, name gradient and cycle colors.
+
 settings_experimental_text	Experimental
 settings_experimental_help	Features that are still being tried out.
 
