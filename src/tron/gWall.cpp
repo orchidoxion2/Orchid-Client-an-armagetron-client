@@ -115,6 +115,9 @@ rFileTexture dir_eWall_moviepack(rTextureGroups::TEX_WALL, lala_mp_dir_eWall, 1,
 REAL sg_cycleTrailHeight = .5;
 static tConfItem<REAL> sg_cycleTrailHeightConf( "CYCLE_TRAIL_HEIGHT", sg_cycleTrailHeight );
 
+bool sg_cycleTrailAgeLine = false;
+static tConfItem<bool> sg_cycleTrailAgeLineConf( "CYCLE_TRAIL_AGE_LINE", sg_cycleTrailAgeLine );
+
 static REAL sg_RimStretchX=100;
 static tSettingItem<REAL> sg_RimStretchXConf
 ("RIM_WALL_STRETCH_X",sg_RimStretchX);
@@ -1065,6 +1068,77 @@ void gNetPlayerWall::RenderList(bool list, gWallRenderMode renderMode ){
     }
 }
 
+
+// green for a fresh trail, yellow halfway, red where it is about to vanish
+static void sg_TrailAgeColor( REAL age )
+{
+    age = age < 0 ? 0 : ( age > 1 ? 1 : age );
+    if ( age < .5 )
+    {
+        REAL const f = age * 2;
+        Color( .25 + .75 * f, .9 - .05 * f, .3 - .15 * f, 1 );
+    }
+    else
+    {
+        REAL const f = age * 2 - 1;
+        Color( 1, .85 - .65 * f, .15, 1 );
+    }
+}
+
+void gNetPlayerWall::RenderAgeLine()
+{
+    if ( !cycle_ )
+        return;
+
+    // the oldest part of the trail is cut off once the trail is longer than this
+    REAL const length = cycle_->ThisWallsLength();
+    REAL const distance = cycle_->GetDistance();
+    bool const limited = gCycle::WallsLength() > 0 && length > 0;
+    REAL const cut = limited ? distance - length : -1E+30;
+
+    // a dead cycle's whole trail vanishes after the walls stay up delay
+    REAL deathAge = 0;
+    if ( !cycle_->Alive() && gCycle::WallsStayUpDelay() >= 0 )
+    {
+        deathAge = gCycle::WallsStayUpDelay() > 0 ? ( se_GameTime() - cycle_->DeathTime() ) / gCycle::WallsStayUpDelay() : 1;
+        if ( deathAge >= 1 )
+            return;
+    }
+
+    eCoord const P1 = EndPoint(0);
+    eCoord const P2 = EndPoint(1);
+    REAL const z = sg_cycleTrailHeight + .1;
+
+    BeginLines();
+    for ( int i = coords_.Len()-2; i >= 0; --i )
+    {
+        if ( !coords_(i).IsDangerous )
+            continue;
+        REAL pa = coords_(i).Pos;
+        REAL pe = coords_(i+1).Pos;
+        if ( pa > pe )
+            Swap( pa, pe );
+        if ( pe <= cut )
+            continue;
+        if ( pa < cut )
+            pa = cut;
+
+        // short pieces, so the color follows the age along long straight trails
+        int const steps = limited ? 1 + int( ( pe - pa ) / length * 20 ) : 1;
+        for ( int s = 0; s < steps; ++s )
+        {
+            REAL const ends[2] = { pa + ( pe - pa ) * s / steps, pa + ( pe - pa ) * ( s + 1 ) / steps };
+            for ( REAL pos: ends )
+            {
+                REAL age = limited ? ( distance - pos ) / length : 0;
+                sg_TrailAgeColor( age > deathAge ? age : deathAge );
+                eCoord const p = P1 + ( P2 - P1 ) * Alpha( pos );
+                Vertex( p.x, p.y, z );
+            }
+        }
+    }
+    RenderEnd();
+}
 
 inline bool upperlinecolor(REAL r,REAL g,REAL b, REAL a){
     if (rTextureGroups::TextureMode[rTextureGroups::TEX_WALL]<0)

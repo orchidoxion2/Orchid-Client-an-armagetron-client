@@ -714,6 +714,10 @@ static uSelectEntry<REAL> trailHeight75(trailHeight,"$pref_trail_height_75_text"
 static uSelectEntry<REAL> trailHeight50(trailHeight,"$pref_trail_height_50_text","$pref_trail_height_help",.5);
 static uSelectEntry<REAL> trailHeight25(trailHeight,"$pref_trail_height_25_text","$pref_trail_height_help",.25);
 
+static uMenuItemToggle trailAgeLine
+(&screen_menu_prefs,"$pref_trail_age_text",
+ "$pref_trail_age_help",sg_cycleTrailAgeLine);
+
 static uMenuItemSelection<int> mzm
 (&screen_menu_prefs,
  "$detail_zone_style_text",

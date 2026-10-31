@@ -4325,6 +4325,20 @@ void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * 
 
     // then, render the rest
     RenderAll( camera, cycle, wallList_ );
+
+    if ( sg_cycleTrailAgeLine )
+    {
+        RenderEnd();
+        glDisable( GL_TEXTURE_2D );
+        glLineWidth( 3 );
+        for ( gNetPlayerWall * list: { wallsWithDisplayList_, wallList_ } )
+            for ( gNetPlayerWall * run = list; run; run = run->Next() )
+                if ( run->BegPos() + EPS < run->EndPos() )
+                    run->RenderAgeLine();
+        glLineWidth( 1 );
+        if ( rTextureGroups::TextureMode[rTextureGroups::TEX_WALL] != 0 )
+            glEnable( GL_TEXTURE_2D );
+    }
 }
 
 void gCycle::Render(const eCamera *cam){

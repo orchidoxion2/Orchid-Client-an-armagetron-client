@@ -2574,6 +2574,8 @@ pref_lowersky_help		Toggles the display of the lower sky plane, a plasma cloud. 
 pref_uppersky_text		Upper Sky:
 pref_uppersky_help		Toggles the display of the upper sky, a solid plane similar to the floor. Turning both sky planes on hurts performance.
 
+pref_trail_age_text		Trail Age Line:
+pref_trail_age_help		Draws a line on top of every trail that shows how old it is: green where it is fresh, yellow halfway, red where it is about to vanish. Trails only vanish on servers with a trail length limit, or after their cycle died.
 pref_trail_height_text		Trail Height:
 pref_trail_height_help		How high the cycle trails are drawn. Only changes the look; the game plays the same.
 pref_trail_height_100_text	100% (original)

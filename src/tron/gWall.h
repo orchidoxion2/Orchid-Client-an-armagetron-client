@@ -39,6 +39,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //! drawn height of the cycle trails, 1 is the original height
 extern REAL sg_cycleTrailHeight;
 
+//! draw a line on top of the trails that shows how close each part is to vanishing
+extern bool sg_cycleTrailAgeLine;
+
 class gExplosion;
 class gCycle;
 class gCycleMovement;
@@ -245,6 +248,7 @@ public:
 
     // virtual void Render(const eCamera *cam);
     void RenderList(bool list, gWallRenderMode );
+    void RenderAgeLine();  //!< the trail age line, drawn every frame outside the display lists
     virtual void RenderNormal(const eCoord &x1,const eCoord &x2,REAL ta,REAL te,REAL r,REAL g,REAL b,REAL a, gWallRenderMode mode );
     virtual void RenderBegin(const eCoord &x1,const eCoord &x2,REAL ta,REAL te,REAL ra,REAL rb,REAL r,REAL g,REAL b,REAL a, gWallRenderMode mode );
 #endif
