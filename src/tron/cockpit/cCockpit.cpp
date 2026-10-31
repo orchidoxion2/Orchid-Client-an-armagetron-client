@@ -33,6 +33,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "cockpit/cMap.h"
 #include "cockpit/cCamview.h"
 #include "cockpit/cRectangle.h"
+#include "cockpit/cSpotify.h"
 #include "nConfig.h"
 
 #ifndef DEDICATED
@@ -598,6 +599,8 @@ cWidget::Base_ptr cCockpit::ProcessWidgetType(node cur) {
     }
     if(cur.IsOfType("Rectangle"))
         return cWidget::Base_ptr(new cWidget::Rectangle());
+    if(cur.IsOfType("Spotify"))
+        return cWidget::Base_ptr(new cWidget::Spotify());
     return cWidget::Base_ptr();
 }
 

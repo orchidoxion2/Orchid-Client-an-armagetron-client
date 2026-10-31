@@ -2426,7 +2426,7 @@ public:
         if ( status.StartsWith( "Waiting" ) )
             return tString( "Waiting for the browser login (click to open it again)" );
         tString label( status );
-        label << " - click to try again";
+        label << " - click to log in again";
         return label;
     }
 };

@@ -29,10 +29,36 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "tString.h"
 
+#include <string>
+#include <vector>
+
+//! what the HUD shows: the current song and its lyrics
+struct gSpotifyNowPlaying
+{
+    struct Line
+    {
+        int ms;
+        tString text;
+    };
+
+    tString title, artist;
+    int progressMs = 0, durationMs = 0;
+    bool playing = false;
+    bool showLyrics = false;
+    std::vector< Line > lines;  //!< synced lyrics, sorted by time; empty if there are none
+    int trackVersion = 0;       //!< changes with every new song
+};
+
 //! shows the song playing on the player's Spotify account, with synced lyrics from LRCLIB
 class gSpotify
 {
 public:
+    //! fills in the current song; returns false if nothing is to be shown
+    static bool NowPlaying( gSpotifyNowPlaying & info, bool withLines );
+
+    //! the album cover as encoded image data; returns true and fills bytes if it changed since version
+    static bool AlbumArt( int & version, std::string & bytes );
+
     static bool & Enabled();     //!< the SPOTIFY_ENABLED setting
     static bool & ShowLyrics();  //!< the SPOTIFY_LYRICS setting
 

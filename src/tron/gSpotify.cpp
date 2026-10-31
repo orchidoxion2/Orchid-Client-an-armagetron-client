@@ -90,6 +90,8 @@ bool & gSpotify::ShowLyrics(){ return sg_spotifyLyrics; }
 
 #ifdef DEDICATED
 
+bool gSpotify::NowPlaying( gSpotifyNowPlaying &, bool ){ return false; }
+bool gSpotify::AlbumArt( int &, std::string & ){ return false; }
 void gSpotify::Login(){}
 void gSpotify::Logout(){}
 bool gSpotify::LoggedIn(){ return false; }
@@ -654,6 +656,10 @@ struct sp_Shared
 
     std::string lyricsFor;
     std::vector< sp_LyricLine > lyricLines;
+    int trackVersion = 0;
+
+    std::string artUrl, artFor, artBytes;
+    int artVersion = 0;
 
     ~sp_Shared()
     {
@@ -682,6 +688,13 @@ static void sp_ClearTrack( sp_Shared & s )
     s.playing = false;
     s.lyricsFor.clear();
     s.lyricLines.clear();
+    s.artUrl.clear();
+    s.artFor.clear();
+    if ( !s.artBytes.empty() )
+    {
+        s.artBytes.clear();
+        ++s.artVersion;
+    }
 }
 
 static void sp_Sleep( std::unique_lock< std::mutex > & lock, int ms )
@@ -946,7 +959,7 @@ static void sp_Worker()
                 s.refreshToken.clear();
                 s.refreshTokenChanged = true;
                 s.login = SP_FAILED;
-                s.loginMessage = "Spotify login expired, log in again";
+                s.loginMessage = "Spotify login expired";
                 sp_ClearTrack( s );
                 continue;
             }
@@ -1001,6 +1014,7 @@ static void sp_Worker()
         {
             s.lyricsFor.clear();
             s.lyricLines.clear();
+            ++s.trackVersion;
         }
         s.trackID = id;
         s.title = item["name"].String();
@@ -1010,6 +1024,21 @@ static void sp_Worker()
         s.progressMs = int( json["progress_ms"].Number() );
         s.playing = json["is_playing"].Bool();
         s.progressTime = sp_Clock::now();
+
+        // the smallest cover that is still sharp at HUD size
+        sp_Json const & images = item["album"]["images"];
+        std::string artUrl;
+        int artWidth = 0;
+        for ( size_t i = 0; i < images.Size(); ++i )
+        {
+            int width = int( images[i]["width"].Number() );
+            if ( artUrl.empty() || ( width >= 200 && ( artWidth < 200 || width < artWidth ) ) )
+            {
+                artUrl = images[i]["url"].String();
+                artWidth = width;
+            }
+        }
+        s.artUrl = artUrl;
 
         if ( s.lyrics && s.lyricsFor != id )
         {
@@ -1021,6 +1050,20 @@ static void sp_Worker()
             lock.lock();
             if ( s.lyricsFor == id )
                 s.lyricLines.swap( lines );
+        }
+
+        if ( s.artFor != id && !s.artUrl.empty() )
+        {
+            std::string url = s.artUrl;
+            s.artFor = id;
+            lock.unlock();
+            sp_Response image = sp_Request( "GET", url, std::vector< std::string >(), std::string() );
+            lock.lock();
+            if ( s.artFor == id && image.status == 200 )
+            {
+                s.artBytes.swap( image.body );
+                ++s.artVersion;
+            }
         }
     }
 }
@@ -1194,6 +1237,45 @@ tString gSpotify::Lyric()
     if ( line && !line->empty() )
         ret << "0xd6409f" << sp_Clip( *line, 70 );
     return ret;
+}
+
+bool gSpotify::NowPlaying( gSpotifyNowPlaying & info, bool withLines )
+{
+    sp_Shared & s = sp_State();
+    std::lock_guard< std::mutex > lock( s.mutex );
+    sp_Update( s );
+    if ( !s.enabled || s.title.empty() )
+        return false;
+    info.title = tColoredString::RemoveColors( s.title.c_str() );
+    info.artist = tColoredString::RemoveColors( s.artist.c_str() );
+    info.durationMs = s.durationMs;
+    info.playing = s.playing;
+    info.progressMs = s.progressMs;
+    if ( s.playing )
+        info.progressMs += int( std::chrono::duration_cast< std::chrono::milliseconds >( sp_Clock::now() - s.progressTime ).count() );
+    if ( info.durationMs > 0 )
+        info.progressMs = std::min( info.progressMs, info.durationMs );
+    info.showLyrics = s.lyrics;
+    info.trackVersion = s.trackVersion;
+    if ( withLines )
+    {
+        info.lines.clear();
+        info.lines.reserve( s.lyricLines.size() );
+        for ( auto const & l: s.lyricLines )
+            info.lines.push_back( gSpotifyNowPlaying::Line{ l.ms, tColoredString::RemoveColors( l.text.c_str() ) } );
+    }
+    return true;
+}
+
+bool gSpotify::AlbumArt( int & version, std::string & bytes )
+{
+    sp_Shared & s = sp_State();
+    std::lock_guard< std::mutex > lock( s.mutex );
+    if ( version == s.artVersion )
+        return false;
+    version = s.artVersion;
+    bytes = s.artBytes;
+    return true;
 }
 
 void gSpotify::Shutdown()
