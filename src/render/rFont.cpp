@@ -36,6 +36,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef DEDICATED
 #include "rRender.h"
 #include "rTexture.h"
+#include "rDisplayList.h"
+#include <set>
 
 #ifdef HAVE_FTGL_FTGL_H
 // single include. practical.
@@ -178,6 +180,32 @@ class rFontContainer : std::map<int, FTFont *> {
     FTFont *Load(tString const &path);
     bool chat_;              // the font for the console text, set by CHAT_FONT
     float sizeFactor_ = .8;  // guess, then improve
+    std::map< FTFont *, std::set< unsigned int > > made_;  // characters each font already has glyphs for
+
+    // FTGL makes a glyph's texture the first time the glyph is used. Inside a display
+    // list that upload would only be recorded, not done, and the letter stays blank.
+    // So stop the recording before a font sees a new character.
+    FTFont &Prepare(FTGL_STRING const &str, float height) {
+        FTFont &font = GetFont(height);
+        std::set< unsigned int > &made = made_[&font];
+        bool fresh = false;
+        for(size_t i = 0; i < str.size(); ) {
+            unsigned int c = (unsigned int)(str[i] & (sizeof(FTGL_CHAR) == 1 ? 0xff : 0xffffffff));
+            size_t len = 1;
+            if(sizeof(FTGL_CHAR) == 1 && c >= 0xc0) {
+                len = c >= 0xf0 ? 4 : c >= 0xe0 ? 3 : 2;
+                c &= 0x3f >> (len - 1);
+                for(size_t j = 1; j < len && i + j < str.size(); ++j)
+                    c = (c << 6) | (str[i + j] & 0x3f);
+            }
+            i += len;
+            if(made.insert(c).second) fresh = true;
+        }
+        if(fresh && rDisplayList::IsRecording()) {
+            rDisplayList::Cancel();
+        }
+        return font;
+    }
 public:
     explicit rFontContainer( bool chat = false ): chat_( chat ){}
     void clear() {
@@ -185,6 +213,7 @@ public:
             delete i->second;
         }
         std::map<int, FTFont *>::clear();
+        made_.clear();
     }
     /*
     float GetWidth(tString const &str, float height) {
@@ -194,10 +223,11 @@ public:
     }
     */
     float GetWidth(FTGL_STRING const &str, float height) {
-        return GetFont(height).Advance(str.c_str())/sr_screenWidth*2.;
+        return Prepare(str, height).Advance(str.c_str())/sr_screenWidth*2.;
     }
     void Render(FTGL_STRING const &str, float height, tCoord const &where) {
         //std::cerr << "len: " << str.size() << std::endl;
+        Prepare(str, height);
         if(sr_fontType >= sr_fontTexture) {
             glPushMatrix();
             glTranslatef(where.x, where.y, 0.);
@@ -249,7 +279,7 @@ public:
     void BBox(FTGL_STRING const &str, float height, tCoord where, float &l, float &b, float &r, float &t) {
         if(sr_fontType != sr_fontOld) {
             float rubbish;
-            GetFont(height).BBox(str.c_str(), l, b, rubbish, r, t, rubbish);
+            Prepare(str, height).BBox(str.c_str(), l, b, rubbish, r, t, rubbish);
             l/=sr_screenWidth/2.;
             r/=sr_screenWidth/2.;
             t/=sr_screenHeight/2.;
