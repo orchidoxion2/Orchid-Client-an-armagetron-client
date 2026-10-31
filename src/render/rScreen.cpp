@@ -742,6 +742,8 @@ static bool lowlevel_sr_InitDisplay(){
 
         SDL_SetRelativeMouseMode(SDL_FALSE);
 
+        SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+
     #ifdef FORCE_WINDOW
     #ifdef WIN32
         //		sr_screenWidthInPoints  = 400;
