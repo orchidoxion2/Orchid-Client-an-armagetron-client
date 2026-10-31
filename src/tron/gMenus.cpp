@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "gMenus.h"
+#include "gWall.h"
 #include "ePlayer.h"
 #include "rScreen.h"
 #include "rTexture.h"
@@ -702,6 +703,16 @@ void zone_style_on_enter(int const& val) {
     customMenu.SetCenter(.3);
     customMenu.Enter();
 }
+
+static uMenuItemSelection<REAL> trailHeight
+(&screen_menu_prefs,
+ "$pref_trail_height_text",
+ "$pref_trail_height_help",
+ sg_cycleTrailHeight);
+static uSelectEntry<REAL> trailHeight100(trailHeight,"$pref_trail_height_100_text","$pref_trail_height_help",1);
+static uSelectEntry<REAL> trailHeight75(trailHeight,"$pref_trail_height_75_text","$pref_trail_height_help",.75);
+static uSelectEntry<REAL> trailHeight50(trailHeight,"$pref_trail_height_50_text","$pref_trail_height_help",.5);
+static uSelectEntry<REAL> trailHeight25(trailHeight,"$pref_trail_height_25_text","$pref_trail_height_help",.25);
 
 static uMenuItemSelection<int> mzm
 (&screen_menu_prefs,

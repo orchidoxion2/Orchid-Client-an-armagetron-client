@@ -36,6 +36,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "gExplosion.h"
 #include "rDisplayList.h"
 //#include "nObserver.h"
+//! drawn height of the cycle trails, 1 is the original height
+extern REAL sg_cycleTrailHeight;
+
 class gExplosion;
 class gCycle;
 class gCycleMovement;

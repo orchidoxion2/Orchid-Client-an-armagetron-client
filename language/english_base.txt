@@ -2574,6 +2574,12 @@ pref_lowersky_help		Toggles the display of the lower sky plane, a plasma cloud. 
 pref_uppersky_text		Upper Sky:
 pref_uppersky_help		Toggles the display of the upper sky, a solid plane similar to the floor. Turning both sky planes on hurts performance.
 
+pref_trail_height_text		Trail Height:
+pref_trail_height_help		How high the cycle trails are drawn. Only changes the look; the game plays the same.
+pref_trail_height_100_text	100% (original)
+pref_trail_height_75_text	75%
+pref_trail_height_50_text	50%
+pref_trail_height_25_text	25%
 pref_highrim_text		High Rim:
 pref_highrim_help		If enabled, the rim walls will have infinite height. If not, they will be about as high as player walls.
 

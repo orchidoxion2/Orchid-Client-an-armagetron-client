@@ -112,6 +112,9 @@ rFileTexture dir_eWall_moviepack(rTextureGroups::TEX_WALL, lala_mp_dir_eWall, 1,
 */
 #endif
 
+REAL sg_cycleTrailHeight = .5;
+static tConfItem<REAL> sg_cycleTrailHeightConf( "CYCLE_TRAIL_HEIGHT", sg_cycleTrailHeight );
+
 static REAL sg_RimStretchX=100;
 static tSettingItem<REAL> sg_RimStretchXConf
 ("RIM_WALL_STRETCH_X",sg_RimStretchX);
@@ -1127,7 +1130,7 @@ void gNetPlayerWall::RenderNormal(const eCoord &p1,const eCoord &p2,REAL ta,REAL
             a*=alpha;
         }
     }
-    REAL h=1;
+    REAL h=sg_cycleTrailHeight;
 
 
     if (hfrac>0){
@@ -1221,7 +1224,7 @@ void gNetPlayerWall::RenderBegin(const eCoord &p1,const eCoord &pp2,REAL ta,REAL
         //a*=alpha;
     }
 
-    REAL h=1;
+    REAL h=sg_cycleTrailHeight;
 
     eCoord ppos=cycle_->PredictPosition() - cycle_->dir*REAL(gCYCLE_LEN);
 
