@@ -2951,6 +2951,71 @@ void MainMenu(bool ingame){
         }
     };
 
+    // the chosen cycle model from above, at the end of its trail
+    class gCycleModelPreview: public uMenuItem
+    {
+    public:
+        explicit gCycleModelPreview( uMenu * menu ): uMenuItem( menu, "$customization_cycle_model_preview_help" ){}
+        PanelKind GetPanelKind() override { return PANEL_CUSTOM; }
+        tString GetPanelLabel() override { return tString( tOutput( "$customization_preview_text" ) ); }
+        void Render( REAL x, REAL y, REAL alpha, bool selected ) override
+        {
+            DisplayText( x, y, tString( tOutput( "$customization_preview_text" ) ), selected, alpha );
+        }
+        void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool ) override
+        {
+            ePlayer const * player = ePlayer::PlayerConfig( 0 );
+            REAL cr = 1, cg = 1, cb = 1;
+            if ( player )
+            {
+                cr = gPreview::Player( player->rgb[0] ); cg = gPreview::Player( player->rgb[1] ); cb = gPreview::Player( player->rgb[2] );
+            }
+            se_MakeColorValid( cr, cg, cb, 1.0f );
+
+            REAL const h = t - b, cy = ( b + t ) * .5f;
+            gPreview::Text( l + .03f, cy, h * .36f, tString( tOutput( "$customization_preview_text" ) ), sr_fontMenu, .9 );
+
+            std::vector< eCoord > outline;
+            sg_CycleModelShape( sg_cycleModel, outline );
+            REAL const nose = r - .04f, trailL = l + ( r - l ) * .3f;
+            if ( outline.size() < 3 )
+            {
+                // the normal cycle: just say so next to its trail
+                gPreview::Rect( trailL, cy - h * .04f, nose - ( r - l ) * .25f, cy + h * .04f, cr, cg, cb, 1 );
+                gPreview::Text( nose - ( r - l ) * .22f, cy, h * .3f, tString( tOutput( "$customization_cycle_model_0_text" ) ), sr_fontMenu, .8 );
+                return;
+            }
+            // 4.5 model units (the blade) fill a quarter of the row
+            REAL const sx = ( r - l ) * .25f / 4.5f, sy = sx * sr_screenWidth / REAL( std::max( 1, sr_screenHeight ) );
+            REAL back = outline[0].x;
+            for ( eCoord const & o: outline )
+                back = std::min( back, o.x );
+            auto X = [&]( REAL x ){ return nose - ( outline[0].x - x ) * sx; };
+            auto Y = [&]( REAL y ){ return cy + y * sy; };
+            gPreview::Rect( trailL, cy - h * .04f, X( back ) + ( X( outline[0].x ) - X( back ) ) * .3f, cy + h * .04f, cr, cg, cb, 1 );
+
+            // fill from a point inside the shape, then the edges
+            REAL const ix = back + ( outline[0].x - back ) * .4f;
+            RenderEnd();
+            glDisable( GL_TEXTURE_2D );
+            Color( .45 + cr * .55, .45 + cg * .55, .45 + cb * .55, 1 );
+            BeginTriangles();
+            for ( size_t i = 0; i < outline.size(); ++i )
+            {
+                eCoord const & a = outline[i], & c = outline[ ( i + 1 ) % outline.size() ];
+                Vertex( X( ix ), Y( 0 ) );
+                Vertex( X( a.x ), Y( a.y ) );
+                Vertex( X( c.x ), Y( c.y ) );
+            }
+            RenderEnd();
+            Color( cr * .35, cg * .35, cb * .35, 1 );
+            BeginLineLoop();
+            for ( eCoord const & o: outline )
+                Vertex( X( o.x ), Y( o.y ) );
+            RenderEnd();
+        }
+    };
+
     // a few chat lines with the chosen background, opacity and font
     class gChatPreview: public uMenuItem
     {
@@ -3054,6 +3119,15 @@ void MainMenu(bool ingame){
     uMenuItemToggle nameGradientEnabled( &nameGradient, "$customization_name_gradient_enabled_text",
                                          "$customization_name_gradient_help", firstPlayer->nameGradient );
     uMenuItemSubmenu nameGradient_sm( &customization, &nameGradient, "$customization_name_gradient_help" );
+
+    uMenu cycleModel("$customization_cycle_model_text");
+    gCycleModelPreview cycleModelPreview( &cycleModel );
+    uMenuItemSelection<int> cycleModelChoice( &cycleModel, "$customization_cycle_model_text", "$customization_cycle_model_help", sg_cycleModel );
+    cycleModelChoice.NewChoice( "$customization_cycle_model_0_text", "$customization_cycle_model_0_help", 0 );
+    cycleModelChoice.NewChoice( "$customization_cycle_model_1_text", "$customization_cycle_model_1_help", 1 );
+    cycleModelChoice.NewChoice( "$customization_cycle_model_2_text", "$customization_cycle_model_2_help", 2 );
+    cycleModelChoice.NewChoice( "$customization_cycle_model_3_text", "$customization_cycle_model_3_help", 3 );
+    uMenuItemSubmenu cycleModel_sm( &customization, &cycleModel, "$customization_cycle_model_help" );
 
     uMenu ownColors("$customization_own_colors_text");
     gOwnColorsPreview ownColorsPreview( &ownColors );

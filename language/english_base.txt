@@ -2060,6 +2060,17 @@ customization_custom_hud_text	Custom HUD:
 customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Off: the HUD that comes with the game. Your own HUD is kept either way.
 
 customization_preview_text	Preview
+customization_cycle_model_text	Cycle Model
+customization_cycle_model_help	The shape the cycles are drawn in. Only changes how they look on your screen.
+customization_cycle_model_preview_help	The chosen model at the end of its trail, seen from above, in your cycle color.
+customization_cycle_model_0_text	Classic
+customization_cycle_model_0_help	The normal light cycle (or your moviepack).
+customization_cycle_model_1_text	Needle
+customization_cycle_model_1_help	A thin wedge with a notch at the back.
+customization_cycle_model_2_text	Pin
+customization_cycle_model_2_help	Almost a line, with a flat back.
+customization_cycle_model_3_text	Blade
+customization_cycle_model_3_help	Longer, with a sharper nose.
 customization_own_colors_preview_help	Your cycle and trail in this color, as everyone will see them.
 customization_chat_preview_help	The chat with the background, opacity and font above.
 

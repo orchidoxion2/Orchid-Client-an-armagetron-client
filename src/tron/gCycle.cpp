@@ -2293,6 +2293,111 @@ static int sg_RegisterOldOwnColorSettings()
 }
 static int sg_oldOwnColorSettings = sg_RegisterOldOwnColorSettings();
 
+int sg_cycleModel = 0;
+static tConfItem< int > sg_cycleModelConf( "CYCLE_MODEL", sg_cycleModel );
+
+REAL sg_CycleModelShape( int model, std::vector< eCoord > & outline )
+{
+    // measured from the design: the needle is as long as the normal cycle
+    REAL const k = 3.0 / 177, nose = .77;
+    outline.clear();
+    switch ( model )
+    {
+    case 1: // needle: thin wedge with a notch at the back
+        outline.push_back( eCoord( nose, 0 ) );
+        outline.push_back( eCoord( nose - 177 * k, 26 * k ) );
+        outline.push_back( eCoord( nose - 159 * k, 0 ) );
+        outline.push_back( eCoord( nose - 177 * k, -26 * k ) );
+        return .55;
+    case 2: // pin: almost a line, flat back
+        outline.push_back( eCoord( nose, 0 ) );
+        outline.push_back( eCoord( nose - 176 * k, 11.5 * k ) );
+        outline.push_back( eCoord( nose - 176 * k, -11.5 * k ) );
+        return .35;
+    case 3: // blade: longer, with a sharper nose
+        outline.push_back( eCoord( nose, 0 ) );
+        outline.push_back( eCoord( nose - 264 * k, 29 * k ) );
+        outline.push_back( eCoord( nose - 241 * k, 0 ) );
+        outline.push_back( eCoord( nose - 264 * k, -29 * k ) );
+        return .5;
+    default:
+        return 0;
+    }
+}
+
+#ifndef DEDICATED
+// draws a cycle model as a low pyramid over its outline, lit, in the cycle's color
+static void sg_RenderCycleModel( int model, gRealColor const & color )
+{
+    std::vector< eCoord > outline;
+    REAL const height = sg_CycleModelShape( model, outline );
+    if ( outline.size() < 3 )
+        return;
+
+    // the top of the ridge sits a little in front of the back end
+    REAL back = outline[0].x;
+    for ( eCoord const & o: outline )
+        back = std::min( back, o.x );
+    REAL backCenter = back;
+    for ( eCoord const & o: outline )
+        if ( fabs( o.y ) < 1E-4 && o.x < outline[0].x )
+            backCenter = o.x;
+    REAL const apex[3] = { backCenter + ( outline[0].x - backCenter ) * .2f, 0, height };
+    REAL const ground = .05;
+
+    GLfloat material[4] = { GLfloat( color.r_ ), GLfloat( color.g_ ), GLfloat( color.b_ ), 1 };
+    GLfloat ambient[4] = { GLfloat( color.r_ * .35 ), GLfloat( color.g_ * .35 ), GLfloat( color.b_ * .35 ), 1 };
+    GLfloat white[4] = { 1, 1, 1, 1 };
+    GLfloat black[4] = { 0, 0, 0, 1 };
+    glDisable( GL_TEXTURE_2D );
+    glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, material );
+    glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, ambient );
+    glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, black );
+
+    BeginTriangles();
+    for ( size_t i = 0; i < outline.size(); ++i )
+    {
+        eCoord const & a = outline[i];
+        eCoord const & b = outline[ ( i + 1 ) % outline.size() ];
+        REAL const u[3] = { b.x - a.x, b.y - a.y, 0 };
+        REAL const v[3] = { apex[0] - a.x, apex[1] - a.y, apex[2] - ground };
+        REAL n[3] = { u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0] };
+        if ( n[2] < 0 )
+            for ( REAL & c: n )
+                c = -c;
+        REAL const len = sqrt( n[0] * n[0] + n[1] * n[1] + n[2] * n[2] );
+        if ( len <= 0 )
+            continue;
+        glNormal3f( n[0] / len, n[1] / len, n[2] / len );
+        Vertex( a.x, a.y, ground );
+        Vertex( b.x, b.y, ground );
+        Vertex( apex[0], apex[1], apex[2] );
+    }
+    RenderEnd();
+
+    glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, white );
+    glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, white );
+    GLfloat defaultAmbient[4] = { .2, .2, .2, 1 };
+    glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, defaultAmbient );
+
+    // thin dark edges, like in the design
+    glDisable( GL_LIGHTING );
+    Color( color.r_ * .3, color.g_ * .3, color.b_ * .3 );
+    BeginLines();
+    for ( size_t i = 0; i < outline.size(); ++i )
+    {
+        eCoord const & a = outline[i];
+        eCoord const & b = outline[ ( i + 1 ) % outline.size() ];
+        Vertex( a.x, a.y, ground );
+        Vertex( b.x, b.y, ground );
+        Vertex( a.x, a.y, ground );
+        Vertex( apex[0], apex[1], apex[2] );
+    }
+    RenderEnd();
+    glEnable( GL_LIGHTING );
+}
+#endif
+
 void gCycle::MyInitAfterCreation(){
 #ifndef DEDICATED
     joystick_ = tNEW( gJoystick( this ) );
@@ -4484,7 +4589,21 @@ void gCycle::Render(const eCamera *cam){
         TexMatrix();
         IdentityMatrix();
 
-        if (mp){
+        if ( sg_cycleModel > 0 && sg_cycleModel < sg_cycleModelCount ){
+            ModelMatrix();
+            if ( !blinking )
+            {
+                glPushMatrix();
+                if (!mp)
+                    glTranslatef(1.5,0,0);
+                sg_RenderCycleModel( sg_cycleModel, color_ );
+                glPopMatrix();
+            }
+            glPopMatrix();
+            if (mp)
+                glTranslatef(-1.5,0,0);
+        }
+        else if (mp){
 
             ModelMatrix();
             if ( !blinking )

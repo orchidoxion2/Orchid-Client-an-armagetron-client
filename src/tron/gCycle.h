@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //#include "rModel.h"
 #include "eNetGameObject.h"
 #include "tList.h"
+#include <vector>
 #include "nObserver.h"
 #include "rDisplayList.h"
 
@@ -60,6 +61,14 @@ extern bool headlights;
 extern REAL sg_rubberCycle;
 
 extern REAL sg_cycleInvulnerableTime;
+
+//! CYCLE_MODEL: 0 the normal cycle, 1 needle, 2 pin, 3 blade
+extern int sg_cycleModel;
+int const sg_cycleModelCount = 4;
+
+//! outline of a cycle model seen from above (x forward, y left, counterclockwise, starting at the nose),
+//! in model units with the cycle's position at the origin; returns the height of its ridge
+REAL sg_CycleModelShape( int model, std::vector< eCoord > & outline );
 
 namespace Game { class CycleSync; }
 
