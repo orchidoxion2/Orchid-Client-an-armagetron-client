@@ -211,6 +211,13 @@ class rFontContainer : std::map<int, FTFont *> {
     }
 public:
     explicit rFontContainer( bool chat = false, char const * file = 0 ): chat_( chat ), file_( file ){}
+    //! switches to another fixed font file, forgetting the glyphs of the old one
+    void SetFile( char const * file ) {
+        if ( file != file_ ) {
+            clear();
+            file_ = file;
+        }
+    }
     void clear() {
         for(iterator i = begin(); i != end(); ++i) {
             delete i->second;
@@ -389,6 +396,18 @@ rFontContainer sr_Font;
 static rFontContainer sr_ChatFont( true );
 static rFontContainer sr_LyricsFont( false, "Caveat-SemiBold.ttf" );
 
+// CINEMATIC_LYRICS_FONT: 0 is the handwritten Caveat, the others are the fonts that come with the game
+static char const * const sr_lyricsFontFiles[] = { "Caveat-SemiBold.ttf", "Inter-Medium.otf", "Armagetronad.ttf", "DejaVuSans.ttf", "JetBrainsMono-Regular.ttf" };
+int sr_lyricsFont = 0;
+static tConfItem<int> sr_lyricsFontConf("CINEMATIC_LYRICS_FONT", sr_lyricsFont);
+
+static rFontContainer & sr_LyricsFontNow()
+{
+    int const count = sizeof( sr_lyricsFontFiles ) / sizeof( sr_lyricsFontFiles[0] );
+    sr_LyricsFont.SetFile( sr_lyricsFontFiles[ sr_lyricsFont >= 0 && sr_lyricsFont < count ? sr_lyricsFont : 0 ] );
+    return sr_LyricsFont;
+}
+
 static rFontContainer & sr_FontFor( sr_fontClass type )
 {
     // the chat font was changed in the menu
@@ -399,19 +418,19 @@ static rFontContainer & sr_FontFor( sr_fontClass type )
         loaded = sr_chatFont;
     }
     if ( type == sr_fontLyrics )
-        return sr_LyricsFont;
+        return sr_LyricsFontNow();
     return type == sr_fontConsole && *sr_ChatFontFile() ? sr_ChatFont : sr_Font;
 }
 
 float sr_LyricsTextWidth( tString const & text, float height ) {
     STRING_TO_FTGL( text, str );
-    return sr_LyricsFont.GetWidth( str, height );
+    return sr_LyricsFontNow().GetWidth( str, height );
 }
 
 void sr_LyricsTextRender( tString const & text, float height, float x, float y, bool additive ) {
     STRING_TO_FTGL( text, str );
     sr_textAdditive = additive;
-    sr_LyricsFont.Render( str, height, tCoord( x, y ) );
+    sr_LyricsFontNow().Render( str, height, tCoord( x, y ) );
     sr_textAdditive = false;
 }
 

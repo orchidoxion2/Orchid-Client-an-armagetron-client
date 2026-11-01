@@ -40,10 +40,14 @@ static tConfItem< int > sg_cinematicLyricsRedConf( "CINEMATIC_LYRICS_RED", sg_ci
 static tConfItem< int > sg_cinematicLyricsGreenConf( "CINEMATIC_LYRICS_GREEN", sg_cinematicLyricsRGB[1] );
 static tConfItem< int > sg_cinematicLyricsBlueConf( "CINEMATIC_LYRICS_BLUE", sg_cinematicLyricsRGB[2] );
 
+static int sg_cinematicLyricsDistance = 26;  // how far in front of the cycle the lyrics float
+static tConfItem< int > sg_cinematicLyricsDistanceConf( "CINEMATIC_LYRICS_DISTANCE", sg_cinematicLyricsDistance );
+
 static bool sg_cinematicLyricsStationary = false;
 static tConfItem< bool > sg_cinematicLyricsStationaryConf( "CINEMATIC_LYRICS_STATIONARY", sg_cinematicLyricsStationary );
 
 bool & gCinematicLyrics::Enabled(){ return sg_cinematicLyrics; }
+int & gCinematicLyrics::Distance(){ return sg_cinematicLyricsDistance; }
 bool & gCinematicLyrics::Stationary(){ return sg_cinematicLyricsStationary; }
 int & gCinematicLyrics::ColorMode(){ return sg_cinematicLyricsColor; }
 int & gCinematicLyrics::Custom( int channel ){ return sg_cinematicLyricsRGB[ channel < 0 ? 0 : ( channel > 2 ? 2 : channel ) ]; }
@@ -93,7 +97,6 @@ namespace
 REAL const cl_wordHeight = 4.6;   // height of a normal word
 REAL const cl_rowWidth   = 36;    // a line breaks into rows this wide
 REAL const cl_rowGap     = 1.15;  // row distance, in word heights
-REAL const cl_ahead      = 26;    // how far in front of the cycle the lyrics float
 REAL const cl_depth      = .55;   // how thick the letters are
 int  const cl_layers     = 7;     // slices that make up the thickness
 REAL const cl_sideMin    = 7;     // a line off to the side sits at least this far from the middle
@@ -140,6 +143,7 @@ struct cl_Line
 {
     int index = -1;
     int startMs = 0;
+    int font = -1;    // the lyrics font it was laid out with
     REAL bottom = 0;  // lowest point of the letters, below the center
     REAL side = 0;     // where the line wants to be, sideways from straight ahead (right is positive)
     REAL sideNow = 0;  // where it is, pulled toward the middle when the wall is in the way
@@ -151,6 +155,7 @@ void cl_Layout( cl_Line & line, tString const & text, int index, int lengthMs )
 {
     line.words.clear();
     line.index = index;
+    line.font = sr_lyricsFont;
     line.bottom = 0;
     unsigned int const seed = 0x9e3779b9u * ( index + 1 );
 
@@ -451,7 +456,8 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     d = d * ( 1 / sqrt( d.NormSquared() ) );
     cl_Frame target;
     target.dir = d;
-    REAL const ahead = standing ? cl_ahead * 1.15 : cl_ahead;
+    REAL const distance = cl_Clamp( sg_cinematicLyricsDistance, gCinematicLyrics::distanceMin, gCinematicLyrics::distanceMax );
+    REAL const ahead = standing ? distance * 1.15 : distance;
     target.pos = pos + d * cl_Ahead( pos, d, ahead );
     if ( !v.hasFrame || ( v.frame.pos - target.pos ).NormSquared() > 200 * 200 )
     {
@@ -504,6 +510,14 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     }
     else if ( v.info.playing )
         v.shown += dt;
+
+    // the font was changed: lay the line out again, the words have new widths
+    if ( v.current.index >= 0 && v.current.index < int( v.info.lines.size() ) && v.current.font != sr_lyricsFont )
+    {
+        int const i = v.current.index;
+        int const next = i + 1 < int( v.info.lines.size() ) ? v.info.lines[ i + 1 ].ms : v.info.durationMs;
+        cl_Layout( v.current, v.info.lines[ i ].text, i, next - v.info.lines[ i ].ms );
+    }
 
     if ( sg_cinematicLyricsStationary )
     {

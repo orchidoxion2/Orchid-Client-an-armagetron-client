@@ -2859,17 +2859,6 @@ void MainMenu(bool ingame){
 
 
     uMenu experimental("$settings_experimental_text");
-    uMenuItemToggle cinematicStationary
-    (&experimental,"$cinematic_lyrics_stationary_text",
-     "$cinematic_lyrics_stationary_help",gCinematicLyrics::Stationary());
-    uMenuItemSelection<int> cinematicPlacement
-    (&experimental,"$cinematic_lyrics_placement_text",
-     "$cinematic_lyrics_placement_help",gCinematicLyrics::Placement());
-    cinematicPlacement.NewChoice("$cinematic_lyrics_placement_0_text","$cinematic_lyrics_placement_0_help",0);
-    cinematicPlacement.NewChoice("$cinematic_lyrics_placement_1_text","$cinematic_lyrics_placement_1_help",1);
-    uMenuItemToggle cinematicLyrics
-    (&experimental,"$cinematic_lyrics_text",
-     "$cinematic_lyrics_help",gCinematicLyrics::Enabled());
     uMenuItemToggle trailAgeLine
     (&experimental,"$pref_trail_age_text",
      "$pref_trail_age_help",sg_cycleTrailAgeLine);
@@ -3127,7 +3116,12 @@ void MainMenu(bool ingame){
             gPreview::Text( l + .03f, cy, h * .36f, tString( tOutput( "$customization_preview_text" ) ), sr_fontMenu, .9 );
 
             tString const words( tOutput( "$customization_lyrics_color_sample" ) );
-            REAL const size = h * .8f, x = l + ( r - l ) * .28f, y = b + h * .2f;
+            REAL const x = l + ( r - l ) * .28f, y = b + h * .24f;
+            // as big as fits the row, whatever the font
+            REAL size = h * .8f;
+            REAL const width = sr_LyricsTextWidth( words, size ), room = ( r - x ) - ( r - l ) * .04f;
+            if ( width > room && width > 0 )
+                size *= room / width;
             REAL const px = 2.0f / sr_screenWidth, py = 2.0f / sr_screenHeight;
             RenderEnd();
             glEnable( GL_BLEND );
@@ -3160,7 +3154,28 @@ void MainMenu(bool ingame){
     uMenuItemSelection<int> lyricsColorMode( &lyricsColor, "$customization_lyrics_color_mode_text", "$customization_lyrics_color_mode_help", gCinematicLyrics::ColorMode() );
     lyricsColorMode.NewChoice( "$customization_lyrics_color_mode_0_text", "$customization_lyrics_color_mode_0_help", 0 );
     lyricsColorMode.NewChoice( "$customization_lyrics_color_mode_1_text", "$customization_lyrics_color_mode_1_help", 1 );
-    uMenuItemSubmenu lyricsColor_sm( &customization, &lyricsColor, "$customization_lyrics_color_help" );
+
+    // Experimental > Cinematic Lyrics: every cinematic lyrics setting in one place
+    // (items are listed bottom to top: the last one created shows first)
+    uMenu cinematic("$cinematic_lyrics_menu_text");
+    gLyricsColorPreview cinematicPreview( &cinematic );
+    uMenuItemSubmenu lyricsColor_sm( &cinematic, &lyricsColor, "$customization_lyrics_color_help" );
+    uMenuItemSelection<int> cinematicFont( &cinematic, "$cinematic_lyrics_font_text", "$cinematic_lyrics_font_help", sr_lyricsFont );
+    cinematicFont.NewChoice( "$cinematic_lyrics_font_0_text", "$cinematic_lyrics_font_0_help", 0 );
+    cinematicFont.NewChoice( "$customization_chat_font_1_text", "$cinematic_lyrics_font_help", 1 );
+    cinematicFont.NewChoice( "$customization_chat_font_2_text", "$cinematic_lyrics_font_help", 2 );
+    cinematicFont.NewChoice( "$customization_chat_font_3_text", "$cinematic_lyrics_font_help", 3 );
+    cinematicFont.NewChoice( "$customization_chat_font_4_text", "$cinematic_lyrics_font_help", 4 );
+    uMenuItemSlider cinematicDistance( &cinematic, "$cinematic_lyrics_distance_text", "$cinematic_lyrics_distance_help",
+                                       gCinematicLyrics::Distance(), gCinematicLyrics::distanceMin, gCinematicLyrics::distanceMax, 2 );
+    uMenuItemToggle cinematicStationary( &cinematic, "$cinematic_lyrics_stationary_text",
+                                         "$cinematic_lyrics_stationary_help", gCinematicLyrics::Stationary() );
+    uMenuItemSelection<int> cinematicPlacement( &cinematic, "$cinematic_lyrics_placement_text",
+                                                "$cinematic_lyrics_placement_help", gCinematicLyrics::Placement() );
+    cinematicPlacement.NewChoice( "$cinematic_lyrics_placement_0_text", "$cinematic_lyrics_placement_0_help", 0 );
+    cinematicPlacement.NewChoice( "$cinematic_lyrics_placement_1_text", "$cinematic_lyrics_placement_1_help", 1 );
+    uMenuItemToggle cinematicLyrics( &cinematic, "$cinematic_lyrics_text", "$cinematic_lyrics_help", gCinematicLyrics::Enabled() );
+    uMenuItemSubmenu cinematic_sm( &experimental, &cinematic, "$cinematic_lyrics_menu_help" );
 
     uMenu chatLook("$customization_chat_text");
     gChatPreview chatPreview( &chatLook );

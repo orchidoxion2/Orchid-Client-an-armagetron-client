@@ -2073,7 +2073,7 @@ customization_cycle_model_3_text	Blade
 customization_cycle_model_3_help	Longer, with a sharper nose.
 customization_own_colors_preview_help	Your cycle and trail in this color, as everyone will see them.
 customization_lyrics_color_text	Lyrics Color
-customization_lyrics_color_help	The glow color of the Cinematic Lyrics (Experimental tab). The letters themselves stay white. Only you see it.
+customization_lyrics_color_help	The glow color of the Cinematic Lyrics. The letters themselves stay white. Only you see it.
 customization_lyrics_color_mode_text	Color:
 customization_lyrics_color_mode_help	Where the glow color of the cinematic lyrics comes from.
 customization_lyrics_color_mode_0_text	Cycle color
@@ -2656,9 +2656,17 @@ pref_trail_age_text		Trail Age Line:
 pref_trail_age_help		This is an experimental feature, using this feature in ranked matches may be prohibited and could get you banned.
 cinematic_lyrics_text	Cinematic Lyrics:
 cinematic_lyrics_help	Shows the Spotify lyrics in the arena as big 3D words in front of your cycle, one word at a time, glowing in your cycle color. Turns off the lyrics in the HUD while it is on.
-cinematic_lyrics_stationary_text	Stationary Cinematic Lyrics:
+cinematic_lyrics_menu_text	Cinematic Lyrics
+cinematic_lyrics_menu_help	Spotify lyrics as big 3D words in the arena: turn them on, and choose where they sit, how far away, the font and the color.
+cinematic_lyrics_distance_text	Distance:
+cinematic_lyrics_distance_help	How far in front of your cycle the lyrics appear, in arena units. Smaller is closer. Drag the slider or use left/right.
+cinematic_lyrics_font_text	Font:
+cinematic_lyrics_font_help	The font of the cinematic lyrics.
+cinematic_lyrics_font_0_text	Handwritten
+cinematic_lyrics_font_0_help	Caveat, a handwritten font like in lyric videos.
+cinematic_lyrics_stationary_text	Stationary:
 cinematic_lyrics_stationary_help	Each lyric line stays on the spot in the arena where it appeared, instead of moving along in front of your cycle. You drive past it, and the next line appears in front of you again.
-cinematic_lyrics_placement_text	Cinematic Lyrics Placement:
+cinematic_lyrics_placement_text	Placement:
 cinematic_lyrics_placement_help	How the cinematic lyrics sit in the arena.
 cinematic_lyrics_placement_0_text	On the floor
 cinematic_lyrics_placement_0_help	The words lie on the floor in front of you, like they are painted on it.
