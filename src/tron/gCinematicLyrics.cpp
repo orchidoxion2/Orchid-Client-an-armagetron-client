@@ -43,11 +43,15 @@ static tConfItem< int > sg_cinematicLyricsBlueConf( "CINEMATIC_LYRICS_BLUE", sg_
 static int sg_cinematicLyricsDistance = 26;  // how far in front of the cycle the lyrics float
 static tConfItem< int > sg_cinematicLyricsDistanceConf( "CINEMATIC_LYRICS_DISTANCE", sg_cinematicLyricsDistance );
 
+static int sg_cinematicLyricsTurnSpeed = 5;  // how fast the lyrics swing around when the cycle turns
+static tConfItem< int > sg_cinematicLyricsTurnSpeedConf( "CINEMATIC_LYRICS_TURN_SPEED", sg_cinematicLyricsTurnSpeed );
+
 static bool sg_cinematicLyricsStationary = false;
 static tConfItem< bool > sg_cinematicLyricsStationaryConf( "CINEMATIC_LYRICS_STATIONARY", sg_cinematicLyricsStationary );
 
 bool & gCinematicLyrics::Enabled(){ return sg_cinematicLyrics; }
 int & gCinematicLyrics::Distance(){ return sg_cinematicLyricsDistance; }
+int & gCinematicLyrics::TurnSpeed(){ return sg_cinematicLyricsTurnSpeed; }
 bool & gCinematicLyrics::Stationary(){ return sg_cinematicLyricsStationary; }
 int & gCinematicLyrics::ColorMode(){ return sg_cinematicLyricsColor; }
 int & gCinematicLyrics::Custom( int channel ){ return sg_cinematicLyricsRGB[ channel < 0 ? 0 : ( channel > 2 ? 2 : channel ) ]; }
@@ -466,7 +470,8 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     }
     else
     {
-        v.frame.dir = v.frame.dir + ( target.dir - v.frame.dir ) * ( 1 - exp( -5 * dt ) );
+        REAL const turnRate = cl_Clamp( sg_cinematicLyricsTurnSpeed, gCinematicLyrics::turnSpeedMin, gCinematicLyrics::turnSpeedMax );
+        v.frame.dir = v.frame.dir + ( target.dir - v.frame.dir ) * ( 1 - exp( -turnRate * dt ) );
         if ( v.frame.dir.NormSquared() < 1E-4 )
             v.frame.dir = target.dir;
         v.frame.dir = v.frame.dir * ( 1 / sqrt( v.frame.dir.NormSquared() ) );

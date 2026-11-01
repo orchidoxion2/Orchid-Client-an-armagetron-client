@@ -3166,6 +3166,8 @@ void MainMenu(bool ingame){
     cinematicFont.NewChoice( "$customization_chat_font_2_text", "$cinematic_lyrics_font_help", 2 );
     cinematicFont.NewChoice( "$customization_chat_font_3_text", "$cinematic_lyrics_font_help", 3 );
     cinematicFont.NewChoice( "$customization_chat_font_4_text", "$cinematic_lyrics_font_help", 4 );
+    uMenuItemSlider cinematicTurnSpeed( &cinematic, "$cinematic_lyrics_turn_speed_text", "$cinematic_lyrics_turn_speed_help",
+                                        gCinematicLyrics::TurnSpeed(), gCinematicLyrics::turnSpeedMin, gCinematicLyrics::turnSpeedMax, 1 );
     uMenuItemSlider cinematicDistance( &cinematic, "$cinematic_lyrics_distance_text", "$cinematic_lyrics_distance_help",
                                        gCinematicLyrics::Distance(), gCinematicLyrics::distanceMin, gCinematicLyrics::distanceMax, 2 );
     uMenuItemToggle cinematicStationary( &cinematic, "$cinematic_lyrics_stationary_text",

@@ -41,6 +41,8 @@ public:
     static int & Placement();  //!< the CINEMATIC_LYRICS_PLACEMENT setting: 0 lying on the floor, 1 standing up
     static int & Distance();     //!< the CINEMATIC_LYRICS_DISTANCE setting: how far in front of the cycle, in arena units
     static int const distanceMin = 8, distanceMax = 80;
+    static int & TurnSpeed();    //!< the CINEMATIC_LYRICS_TURN_SPEED setting: how fast the lyrics swing around on turns
+    static int const turnSpeedMin = 1, turnSpeedMax = 30;
     static bool & Stationary();  //!< the CINEMATIC_LYRICS_STATIONARY setting: lines stay where they appeared
     static int & ColorMode();  //!< the CINEMATIC_LYRICS_COLOR setting: 0 the cycle's color, 1 the custom color
     static int & Custom( int channel );  //!< CINEMATIC_LYRICS_RED/GREEN/BLUE, 0 to 255

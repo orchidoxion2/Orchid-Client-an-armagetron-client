@@ -2660,6 +2660,8 @@ cinematic_lyrics_menu_text	Cinematic Lyrics
 cinematic_lyrics_menu_help	Spotify lyrics as big 3D words in the arena: turn them on, and choose where they sit, how far away, the font and the color.
 cinematic_lyrics_distance_text	Distance:
 cinematic_lyrics_distance_help	How far in front of your cycle the lyrics appear, in arena units. Smaller is closer. Drag the slider or use left/right.
+cinematic_lyrics_turn_speed_text	Turn Speed:
+cinematic_lyrics_turn_speed_help	How fast the lyrics swing around to stay in front of you when you turn. 1 is slow and smooth, 30 is almost instant. 5 is the usual. Has no effect on a line while Stationary is on.
 cinematic_lyrics_font_text	Font:
 cinematic_lyrics_font_help	The font of the cinematic lyrics.
 cinematic_lyrics_font_0_text	Handwritten
