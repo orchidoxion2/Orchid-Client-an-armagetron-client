@@ -3081,6 +3081,84 @@ void MainMenu(bool ingame){
     uMenuItemFunction hudEditor( &customization, "$customization_hud_editor_text",
                                  "$customization_hud_editor_help", &gCockpitEditor::Open );
 
+    // a slider for one channel of the custom cinematic lyrics color
+    class gLyricsColorSlider: public uMenuItemSlider
+    {
+        int channel_;
+    public:
+        gLyricsColorSlider( uMenu * menu, char const * title, int channel )
+        : uMenuItemSlider( menu, title, "$customization_lyrics_color_values_help", gCinematicLyrics::Custom( channel ), 0, 255, 5 ), channel_( channel ){}
+        bool GetPanelSliderColor( REAL & r, REAL & g, REAL & b ) override
+        {
+            r = channel_ == 0 ? .9 : .25;
+            g = channel_ == 1 ? .85 : .25;
+            b = channel_ == 2 ? .95 : .25;
+            return true;
+        }
+    };
+
+    // a few words drawn the way the cinematic lyrics look: glow, thick letters, white face
+    class gLyricsColorPreview: public uMenuItem
+    {
+    public:
+        explicit gLyricsColorPreview( uMenu * menu ): uMenuItem( menu, "$customization_lyrics_color_preview_help" ){}
+        PanelKind GetPanelKind() override { return PANEL_CUSTOM; }
+        tString GetPanelLabel() override { return tString( tOutput( "$customization_preview_text" ) ); }
+        void Render( REAL x, REAL y, REAL alpha, bool selected ) override
+        {
+            DisplayText( x, y, tString( tOutput( "$customization_preview_text" ) ), selected, alpha );
+        }
+        void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool ) override
+        {
+            // the cycle color, the way cycles get it
+            ePlayer const * player = ePlayer::PlayerConfig( 0 );
+            REAL cr = 1, cg = 1, cb = 1;
+            if ( player )
+            {
+                cr = gPreview::Player( player->rgb[0] ); cg = gPreview::Player( player->rgb[1] ); cb = gPreview::Player( player->rgb[2] );
+                se_MakeColorValid( cr, cg, cb, 1.0f );
+            }
+            tColor const glow = gCinematicLyrics::GlowColor( tColor( cr, cg, cb ) );
+
+            REAL const h = t - b, cy = ( b + t ) * .5f;
+            gPreview::Text( l + .03f, cy, h * .36f, tString( tOutput( "$customization_preview_text" ) ), sr_fontMenu, .9 );
+
+            tString const words( tOutput( "$customization_lyrics_color_sample" ) );
+            REAL const size = h * .8f, x = l + ( r - l ) * .28f, y = b + h * .2f;
+            REAL const px = 2.0f / sr_screenWidth, py = 2.0f / sr_screenHeight;
+            RenderEnd();
+            glEnable( GL_BLEND );
+            for ( int ring = 1; ring <= 2; ++ring )
+                for ( int k = 0; k < 8; ++k )
+                {
+                    REAL const a = k * M_PI / 4 + ring * .4;
+                    glColor4f( glow.r_, glow.g_, glow.b_, ring == 1 ? .18 : .09 );
+                    sr_LyricsTextRender( words, size, x + cos( a ) * ring * 2.5f * px, y + sin( a ) * ring * 2.5f * py, true );
+                }
+            for ( int i = 4; i >= 1; --i )
+            {
+                REAL const shade = .7 - .1 * i;
+                glColor4f( glow.r_ * shade, glow.g_ * shade, glow.b_ * shade, 1 );
+                sr_LyricsTextRender( words, size, x + i * .8f * px, y - i * .8f * py );
+            }
+            glColor4f( 1, 1, 1, 1 );
+            sr_LyricsTextRender( words, size, x, y );
+            RenderEnd();
+            glDisable( GL_TEXTURE_2D );
+            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+        }
+    };
+
+    uMenu lyricsColor("$customization_lyrics_color_text");
+    gLyricsColorPreview lyricsColorPreview( &lyricsColor );
+    gLyricsColorSlider lyricsBlue( &lyricsColor, "$customization_own_cycle_b_text", 2 );
+    gLyricsColorSlider lyricsGreen( &lyricsColor, "$customization_own_cycle_g_text", 1 );
+    gLyricsColorSlider lyricsRed( &lyricsColor, "$customization_own_cycle_r_text", 0 );
+    uMenuItemSelection<int> lyricsColorMode( &lyricsColor, "$customization_lyrics_color_mode_text", "$customization_lyrics_color_mode_help", gCinematicLyrics::ColorMode() );
+    lyricsColorMode.NewChoice( "$customization_lyrics_color_mode_0_text", "$customization_lyrics_color_mode_0_help", 0 );
+    lyricsColorMode.NewChoice( "$customization_lyrics_color_mode_1_text", "$customization_lyrics_color_mode_1_help", 1 );
+    uMenuItemSubmenu lyricsColor_sm( &customization, &lyricsColor, "$customization_lyrics_color_help" );
+
     uMenu chatLook("$customization_chat_text");
     gChatPreview chatPreview( &chatLook );
     uMenuItemSelection<int> chatFont( &chatLook, "$customization_chat_font_text", "$customization_chat_font_help", sr_chatFont );

@@ -2072,6 +2072,17 @@ customization_cycle_model_2_help	Almost a line, with a flat back.
 customization_cycle_model_3_text	Blade
 customization_cycle_model_3_help	Longer, with a sharper nose.
 customization_own_colors_preview_help	Your cycle and trail in this color, as everyone will see them.
+customization_lyrics_color_text	Lyrics Color
+customization_lyrics_color_help	The glow color of the Cinematic Lyrics (Experimental tab). The letters themselves stay white. Only you see it.
+customization_lyrics_color_mode_text	Color:
+customization_lyrics_color_mode_help	Where the glow color of the cinematic lyrics comes from.
+customization_lyrics_color_mode_0_text	Cycle color
+customization_lyrics_color_mode_0_help	The color of the cycle the lyrics follow, so they match your cycle (or the one you are watching).
+customization_lyrics_color_mode_1_text	Custom
+customization_lyrics_color_mode_1_help	Always the color set with the sliders below.
+customization_lyrics_color_values_help	Drag the slider or use left/right, 0 to 255. Used when Color is set to Custom.
+customization_lyrics_color_preview_help	How the cinematic lyrics look with this color.
+customization_lyrics_color_sample	Yellow diamonds in the light
 customization_chat_preview_help	The chat with the background, opacity and font above.
 
 settings_experimental_text	Experimental

@@ -33,7 +33,37 @@ static tConfItem< bool > sg_cinematicLyricsConf( "CINEMATIC_LYRICS", sg_cinemati
 static int sg_cinematicLyricsPlacement = 0;
 static tConfItem< int > sg_cinematicLyricsPlacementConf( "CINEMATIC_LYRICS_PLACEMENT", sg_cinematicLyricsPlacement );
 
+static int sg_cinematicLyricsColor = 0;
+static tConfItem< int > sg_cinematicLyricsColorConf( "CINEMATIC_LYRICS_COLOR", sg_cinematicLyricsColor );
+static int sg_cinematicLyricsRGB[3] = { 214, 64, 159 };
+static tConfItem< int > sg_cinematicLyricsRedConf( "CINEMATIC_LYRICS_RED", sg_cinematicLyricsRGB[0] );
+static tConfItem< int > sg_cinematicLyricsGreenConf( "CINEMATIC_LYRICS_GREEN", sg_cinematicLyricsRGB[1] );
+static tConfItem< int > sg_cinematicLyricsBlueConf( "CINEMATIC_LYRICS_BLUE", sg_cinematicLyricsRGB[2] );
+
 bool & gCinematicLyrics::Enabled(){ return sg_cinematicLyrics; }
+int & gCinematicLyrics::ColorMode(){ return sg_cinematicLyricsColor; }
+int & gCinematicLyrics::Custom( int channel ){ return sg_cinematicLyricsRGB[ channel < 0 ? 0 : ( channel > 2 ? 2 : channel ) ]; }
+
+tColor gCinematicLyrics::GlowColor( tColor const & cycle )
+{
+    if ( sg_cinematicLyricsColor == 1 )
+    {
+        REAL c[3];
+        for ( int i = 0; i < 3; ++i )
+            c[i] = sg_cinematicLyricsRGB[i] < 0 ? 0 : ( sg_cinematicLyricsRGB[i] > 255 ? 1 : sg_cinematicLyricsRGB[i] / 255.0f );
+        return tColor( c[0], c[1], c[2] );
+    }
+
+    // a neon glow in the cycle's color, never too dark to see
+    tColor glow( cycle.r_, cycle.g_, cycle.b_ );
+    REAL const bright = glow.r_ > glow.g_ ? ( glow.r_ > glow.b_ ? glow.r_ : glow.b_ ) : ( glow.g_ > glow.b_ ? glow.g_ : glow.b_ );
+    if ( bright < .6 )
+    {
+        REAL const lift = .6 - bright;
+        glow = tColor( glow.r_ + lift, glow.g_ + lift, glow.b_ + lift );
+    }
+    return glow;
+}
 int & gCinematicLyrics::Placement(){ return sg_cinematicLyricsPlacement; }
 
 #ifndef DEDICATED
@@ -418,14 +448,7 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     else if ( v.info.playing )
         v.shown += dt;
 
-    // a neon glow in the cycle's color, never too dark to see
-    tColor glow( color.r_, color.g_, color.b_ );
-    REAL const bright = std::max( glow.r_, std::max( glow.g_, glow.b_ ) );
-    if ( bright < .6 )
-    {
-        REAL const lift = .6 - bright;
-        glow = tColor( glow.r_ + lift, glow.g_ + lift, glow.b_ + lift );
-    }
+    tColor const glow = GlowColor( color );
 
     RenderEnd();
     glDisable( GL_LIGHTING );
