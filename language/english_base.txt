@@ -2016,16 +2016,12 @@ settings_customization_help	Client features: HUD editor, leaderboard, chat look,
 customization_color_overflow_text	Color Overflow:
 customization_color_overflow_help	Lets the red, green and blue settings in Player Setup go above 15. The game turns such values into mixed, overflowing colors on your cycle and trail. Servers can forbid it with BUG_COLOR_OVERFLOW. Switching this off sets colors above 15 back to 15.
 
-customization_own_colors_text	Own Cycle Colors
-customization_own_colors_help	Your own cycle and trail in colors only you see. Everyone else still sees your normal colors. Takes effect from your next cycle on.
-customization_own_colors_enabled_text	Own Cycle Colors:
-customization_own_colors_values_help	0 to 255. Takes effect from your next cycle on. Only you see these colors.
-customization_own_cycle_r_text	Cycle Red:
-customization_own_cycle_g_text	Cycle Green:
-customization_own_cycle_b_text	Cycle Blue:
-customization_own_trail_r_text	Trail Red:
-customization_own_trail_g_text	Trail Green:
-customization_own_trail_b_text	Trail Blue:
+customization_own_colors_text	Cycle Color
+customization_own_colors_help	The color of your cycle and trail. Everyone sees it: this is your normal player color, the same one as in Player Setup. Takes effect from your next cycle on.
+customization_own_colors_values_help	Drag the slider or use left/right. 0 to 15, up to 255 with Color Overflow on. Everyone sees this color from your next cycle on.
+customization_own_cycle_r_text	Red:
+customization_own_cycle_g_text	Green:
+customization_own_cycle_b_text	Blue:
 
 customization_name_gradient_text	Name Gradient
 customization_name_gradient_help	Colors your player name with a gradient, letter by letter. Your name in Player Setup stays as it is. Servers can remove name colors, and the name length limit counts the color codes too.
@@ -2064,7 +2060,7 @@ customization_custom_hud_text	Custom HUD:
 customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Off: the HUD that comes with the game. Your own HUD is kept either way.
 
 customization_preview_text	Preview
-customization_own_colors_preview_help	Your cycle and trail in the colors above, as the game will draw them.
+customization_own_colors_preview_help	Your cycle and trail in this color, as everyone will see them.
 customization_chat_preview_help	The chat with the background, opacity and font above.
 
 settings_experimental_text	Experimental

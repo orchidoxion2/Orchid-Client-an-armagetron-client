@@ -160,15 +160,6 @@ private:
 
 // a complete lightcycle
 //! colors for a local player's own cycle and trail, seen only on this client
-struct gOwnCycleColors
-{
-    bool enabled = false;
-    int cycle[3] = { 214, 64, 159 };
-    int trail[3] = { 214, 64, 159 };
-
-    static gOwnCycleColors & Of( int localPlayer );  //!< settings of local player 0 to 3
-};
-
 class gCycle: public gCycleMovement
 {
     friend class gPlayerWall;

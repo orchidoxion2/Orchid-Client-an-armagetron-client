@@ -296,13 +296,19 @@ public:
         PANEL_TEXT,
         PANEL_KEYS,
         PANEL_EXIT,
-        PANEL_DIVIDER
+        PANEL_DIVIDER,
+        PANEL_SLIDER
     };
     virtual PanelKind GetPanelKind(){ return PANEL_CUSTOM; }
     virtual tString GetPanelLabel(){ return tString(); }
     virtual tString GetPanelValue(){ return tString(); }
     virtual bool GetPanelState(){ return false; }
     virtual int GetPanelCursor(){ return -1; }
+    //! PANEL_SLIDER: where the value sits between its minimum (0) and maximum (1)
+    virtual REAL GetPanelFraction(){ return 0; }
+    virtual void SetPanelFraction( REAL ){}
+    //! PANEL_SLIDER: the fill color of the bar; false for the default accent color
+    virtual bool GetPanelSliderColor( REAL &, REAL &, REAL & ){ return false; }
     //! draws a PANEL_CUSTOM row into the given rectangle of the settings panel
     virtual void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool selected ){ Render( ( l + r ) * .5f, ( b + t ) * .5f, 1, selected ); }
 
@@ -531,6 +537,25 @@ public:
     virtual PanelKind GetPanelKind(){ return PANEL_CHOICE; }
     virtual tString GetPanelLabel(){ return tString( title ); }
     virtual tString GetPanelValue(){ tString s; s << target; return s; }
+};
+
+//! a whole number picked with a slider in the settings panel; left/right keys still step it
+class uMenuItemSlider: public uMenuItemInt{
+public:
+    uMenuItemSlider(uMenu *m,const tOutput &title,
+                    const tOutput &help,int &targ,
+                    int mi,int ma,int step=1)
+    :uMenuItemInt(m,title,help,targ,mi,ma,step){}
+
+    void SetMax( int ma ){ Max = ma; if ( target > Max ) target = Max; }
+
+    PanelKind GetPanelKind() override { return PANEL_SLIDER; }
+    REAL GetPanelFraction() override { return Max > Min ? REAL( target - Min ) / REAL( Max - Min ) : 0; }
+    void SetPanelFraction( REAL f ) override
+    {
+        f = f < 0 ? 0 : ( f > 1 ? 1 : f );
+        target = Min + int( f * ( Max - Min ) + .5f );
+    }
 };
 
 // *****************************************

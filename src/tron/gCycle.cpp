@@ -2275,34 +2275,23 @@ private:
 
 static eLegacyWavData cycle_run("moviesounds/engine.wav","sound/cyclrun.wav");
 
-// OWN_CYCLE_COLOR_<n>, OWN_CYCLE_R_<n> ... OWN_TRAIL_B_<n> for the local players
-gOwnCycleColors & gOwnCycleColors::Of( int localPlayer )
+// the old client-only OWN_CYCLE_* / OWN_TRAIL_* settings: still read from old config files
+// so they cause no "unknown command" messages, but ignored and no longer saved
+static int sg_RegisterOldOwnColorSettings()
 {
-    static gOwnCycleColors colors[ MAX_PLAYERS ];
+    static int ignored[ MAX_PLAYERS ][ 7 ];
     static std::vector< std::unique_ptr< tConfItemBase > > settings;
-    if ( settings.empty() )
-    {
-        char const * const channel[3] = { "R", "G", "B" };
-        for ( int p = 0; p < MAX_PLAYERS; ++p )
+    char const * const names[7] = { "OWN_CYCLE_COLOR_", "OWN_CYCLE_R_", "OWN_CYCLE_G_", "OWN_CYCLE_B_", "OWN_TRAIL_R_", "OWN_TRAIL_G_", "OWN_TRAIL_B_" };
+    for ( int p = 0; p < MAX_PLAYERS; ++p )
+        for ( int n = 0; n < 7; ++n )
         {
             tString name;
-            name << "OWN_CYCLE_COLOR_" << p + 1;
-            settings.emplace_back( new tConfItem< bool >( name, colors[p].enabled ) );
-            for ( int c = 0; c < 3; ++c )
-            {
-                tString cycle, trail;
-                cycle << "OWN_CYCLE_" << channel[c] << "_" << p + 1;
-                trail << "OWN_TRAIL_" << channel[c] << "_" << p + 1;
-                settings.emplace_back( new tConfItem< int >( cycle, colors[p].cycle[c] ) );
-                settings.emplace_back( new tConfItem< int >( trail, colors[p].trail[c] ) );
-            }
+            name << names[n] << p + 1;
+            settings.emplace_back( new tSettingItem< int >( name, ignored[p][n] ) );
         }
-    }
-    return colors[ localPlayer < 0 ? 0 : localPlayer % MAX_PLAYERS ];
+    return 0;
 }
-
-// register the settings at startup, so they are read from the config files
-static gOwnCycleColors & sg_ownCycleColorsInit = gOwnCycleColors::Of( 0 );
+static int sg_oldOwnColorSettings = sg_RegisterOldOwnColorSettings();
 
 void gCycle::MyInitAfterCreation(){
 #ifndef DEDICATED
@@ -2382,24 +2371,6 @@ void gCycle::MyInitAfterCreation(){
 
     // load model and texture
 #ifndef DEDICATED
-    // the local player's own colors, before the cycle texture is made from them
-    if ( player && player->Owner() == sn_myNetID && player->pID >= 0 )
-    {
-        gOwnCycleColors const & own = gOwnCycleColors::Of( player->pID );
-        if ( own.enabled )
-        {
-            auto channel = []( int value ){ return REAL( value < 0 ? 0 : ( value > 255 ? 255 : value ) ) / 255; };
-            color_.r_ = channel( own.cycle[0] );
-            color_.g_ = channel( own.cycle[1] );
-            color_.b_ = channel( own.cycle[2] );
-            trailColor_.r_ = channel( own.trail[0] );
-            trailColor_.g_ = channel( own.trail[1] );
-            trailColor_.b_ = channel( own.trail[2] );
-            se_MakeColorValid( color_.r_, color_.g_, color_.b_, 1.0f );
-            se_MakeColorValid( trailColor_.r_, trailColor_.g_, trailColor_.b_, .5f );
-        }
-    }
-
     gCycleVisuals visuals( color_ );
     if ( !visuals.LoadModel( mp ) )
     {

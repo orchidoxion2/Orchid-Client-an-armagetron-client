@@ -2891,6 +2891,31 @@ void MainMenu(bool ingame){
         {
             return ( value < 0 ? 0 : ( value > 255 ? 255 : value ) ) / 255.0f;
         }
+        //! a player color channel (0 to 15, more with color overflow) the way the game turns it into a color
+        static REAL Player( int value )
+        {
+            return value < 0 ? 0 : ( value > 15 ? 1 : value / 15.0f );
+        }
+    };
+
+    // a slider for one channel of the first player's real color; goes up to 255 with color overflow on
+    class gColorSlider: public uMenuItemSlider
+    {
+        int channel_;
+        void UpdateMax(){ SetMax( sg_colorOverflow ? 255 : 15 ); }
+    public:
+        gColorSlider( uMenu * menu, char const * title, int channel )
+        : uMenuItemSlider( menu, title, "$customization_own_colors_values_help", ePlayer::PlayerConfig( 0 )->rgb[channel], 0, sg_colorOverflow ? 255 : 15 ), channel_( channel ){}
+        REAL GetPanelFraction() override { UpdateMax(); return uMenuItemSlider::GetPanelFraction(); }
+        void SetPanelFraction( REAL f ) override { UpdateMax(); uMenuItemSlider::SetPanelFraction( f ); }
+        void LeftRight( int dir ) override { UpdateMax(); uMenuItemSlider::LeftRight( dir ); }
+        bool GetPanelSliderColor( REAL & r, REAL & g, REAL & b ) override
+        {
+            r = channel_ == 0 ? .9 : .25;
+            g = channel_ == 1 ? .85 : .25;
+            b = channel_ == 2 ? .95 : .25;
+            return true;
+        }
     };
 
     // a cycle with its trail in the chosen colors, brightened the way the game does it
@@ -2906,9 +2931,11 @@ void MainMenu(bool ingame){
         }
         void RenderPanelRow( REAL l, REAL b, REAL r, REAL t, bool ) override
         {
-            gOwnCycleColors const & own = gOwnCycleColors::Of( 0 );
-            REAL cr = gPreview::Channel( own.cycle[0] ), cg = gPreview::Channel( own.cycle[1] ), cb = gPreview::Channel( own.cycle[2] );
-            REAL tr = gPreview::Channel( own.trail[0] ), tg = gPreview::Channel( own.trail[1] ), tb = gPreview::Channel( own.trail[2] );
+            ePlayer const * player = ePlayer::PlayerConfig( 0 );
+            if ( !player )
+                return;
+            REAL cr = gPreview::Player( player->rgb[0] ), cg = gPreview::Player( player->rgb[1] ), cb = gPreview::Player( player->rgb[2] );
+            REAL tr = cr, tg = cg, tb = cb;
             se_MakeColorValid( cr, cg, cb, 1.0f );
             se_MakeColorValid( tr, tg, tb, .5f );
 
@@ -3028,16 +3055,11 @@ void MainMenu(bool ingame){
                                          "$customization_name_gradient_help", firstPlayer->nameGradient );
     uMenuItemSubmenu nameGradient_sm( &customization, &nameGradient, "$customization_name_gradient_help" );
 
-    gOwnCycleColors & own = gOwnCycleColors::Of( 0 );
     uMenu ownColors("$customization_own_colors_text");
     gOwnColorsPreview ownColorsPreview( &ownColors );
-    uMenuItemInt ownTrailB( &ownColors, "$customization_own_trail_b_text", "$customization_own_colors_values_help", own.trail[2], 0, 255, 5 );
-    uMenuItemInt ownTrailG( &ownColors, "$customization_own_trail_g_text", "$customization_own_colors_values_help", own.trail[1], 0, 255, 5 );
-    uMenuItemInt ownTrailR( &ownColors, "$customization_own_trail_r_text", "$customization_own_colors_values_help", own.trail[0], 0, 255, 5 );
-    uMenuItemInt ownCycleB( &ownColors, "$customization_own_cycle_b_text", "$customization_own_colors_values_help", own.cycle[2], 0, 255, 5 );
-    uMenuItemInt ownCycleG( &ownColors, "$customization_own_cycle_g_text", "$customization_own_colors_values_help", own.cycle[1], 0, 255, 5 );
-    uMenuItemInt ownCycleR( &ownColors, "$customization_own_cycle_r_text", "$customization_own_colors_values_help", own.cycle[0], 0, 255, 5 );
-    uMenuItemToggle ownEnabled( &ownColors, "$customization_own_colors_enabled_text", "$customization_own_colors_help", own.enabled );
+    gColorSlider ownBlue( &ownColors, "$customization_own_cycle_b_text", 2 );
+    gColorSlider ownGreen( &ownColors, "$customization_own_cycle_g_text", 1 );
+    gColorSlider ownRed( &ownColors, "$customization_own_cycle_r_text", 0 );
     uMenuItemSubmenu ownColors_sm( &customization, &ownColors, "$customization_own_colors_help" );
 
     class gColorOverflowItem: public uMenuItemToggle

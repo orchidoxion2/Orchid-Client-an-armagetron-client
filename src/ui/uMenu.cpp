@@ -728,9 +728,13 @@ const uPanelColor pn_accent      = { .839, .251, .624, 1 };
 
 const REAL pn_small = .040, pn_body = .046, pn_title = .075;
 
-enum uPanelHitKind { HIT_PANEL, HIT_OUTSIDE, HIT_ROW, HIT_LEFT, HIT_RIGHT, HIT_RAIL, HIT_BACK, HIT_SEARCH };
+enum uPanelHitKind { HIT_PANEL, HIT_OUTSIDE, HIT_ROW, HIT_LEFT, HIT_RIGHT, HIT_RAIL, HIT_BACK, HIT_SEARCH, HIT_SLIDER };
 struct uPanelHit { REAL l, b, r, t; uPanelHitKind kind; int item; };
 std::vector< uPanelHit > pn_hits;
+
+// the slider being dragged with the mouse
+int  pn_dragItem = -1;
+REAL pn_dragL = 0, pn_dragR = 1;
 
 void pn_Hit( REAL l, REAL b, REAL r, REAL t, uPanelHitKind kind, int item = -1 )
 {
@@ -1026,6 +1030,28 @@ void uMenu::RenderPanel()
             pn_Hit( ( vl + valueR ) * .5, b, valueR, t, HIT_RIGHT, i );
             break;
         }
+        case uMenuItem::PANEL_SLIDER:
+        {
+            REAL const valueW = .1, trackR = valueR - valueW, trackL = trackR - ( cr - cl ) * .42;
+            REAL const th = .007 * aspect, knobW = .012, knobH = .022 * aspect;
+            REAL const f = std::max( REAL( 0 ), std::min( REAL( 1 ), item.GetPanelFraction() ) );
+            REAL const kx = trackL + ( trackR - trackL ) * f;
+            pn_Text( labelX, cy, pn_body, label, pn_text, -1, trackL - labelX - .03 );
+            pn_Rect( trackL, cy - th, trackR, cy + th, pn_chip );
+            uPanelColor fill = pn_accent;
+            item.GetPanelSliderColor( fill.r, fill.g, fill.b );
+            pn_Rect( trackL, cy - th, kx, cy + th, fill );
+            bool const hot = sel || pn_dragItem == i || pn_Hover( trackL - knobW, b, trackR + knobW, t );
+            pn_Rect( kx - knobW * .5, cy - knobH, kx + knobW * .5, cy + knobH, hot ? pn_text : pn_textDim );
+            pn_Text( valueR, cy, pn_body, item.GetPanelValue(), pn_text, 1 );
+            pn_Hit( trackL - knobW, b, trackR + knobW, t, HIT_SLIDER, i );
+            if ( pn_dragItem == i )
+            {
+                pn_dragL = trackL;
+                pn_dragR = trackR;
+            }
+            break;
+        }
         case uMenuItem::PANEL_TOGGLE:
         {
             REAL const sw = .085, sh = .022 * aspect, sl = valueR - sw;
@@ -1179,8 +1205,17 @@ bool uMenu::PanelEvent( SDL_Event & event )
     case SDL_MOUSEMOTION:
     {
         pn_MouseToMenu( event.motion.x, event.motion.y );
+        if ( pn_dragItem >= 0 )
+        {
+            if ( ( event.motion.state & SDL_BUTTON_LMASK ) && pn_dragItem < items.Len() && pn_dragR > pn_dragL )
+            {
+                items[pn_dragItem]->SetPanelFraction( ( su_panelMouseX - pn_dragL ) / ( pn_dragR - pn_dragL ) );
+                return true;
+            }
+            pn_dragItem = -1;
+        }
         uPanelHit const * hit = pn_HitAt();
-        if ( hit && ( hit->kind == HIT_ROW || hit->kind == HIT_LEFT || hit->kind == HIT_RIGHT ) &&
+        if ( hit && ( hit->kind == HIT_ROW || hit->kind == HIT_LEFT || hit->kind == HIT_RIGHT || hit->kind == HIT_SLIDER ) &&
              hit->item != selected && items[hit->item]->IsSelectable() )
         {
             lastkey = tSysTimeFloat();
@@ -1226,6 +1261,17 @@ bool uMenu::PanelEvent( SDL_Event & event )
                 Exit();
             }
             break;
+        case HIT_SLIDER:
+        {
+            SetSelected( item );
+            REAL const knob = .012;
+            pn_dragItem = item;
+            pn_dragL = hit->l + knob;
+            pn_dragR = hit->r - knob;
+            if ( pn_dragR > pn_dragL )
+                items[item]->SetPanelFraction( ( su_panelMouseX - pn_dragL ) / ( pn_dragR - pn_dragL ) );
+            break;
+        }
         case HIT_LEFT:
         case HIT_RIGHT:
             SetSelected( item );
@@ -1241,6 +1287,7 @@ bool uMenu::PanelEvent( SDL_Event & event )
                 items[item]->LeftRight( 1 );
                 break;
             case uMenuItem::PANEL_CHOICE:
+            case uMenuItem::PANEL_SLIDER:
             case uMenuItem::PANEL_TEXT:
                 break;
             default:
