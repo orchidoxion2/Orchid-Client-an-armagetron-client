@@ -2859,6 +2859,9 @@ void MainMenu(bool ingame){
 
 
     uMenu experimental("$settings_experimental_text");
+    uMenuItemToggle cinematicStationary
+    (&experimental,"$cinematic_lyrics_stationary_text",
+     "$cinematic_lyrics_stationary_help",gCinematicLyrics::Stationary());
     uMenuItemSelection<int> cinematicPlacement
     (&experimental,"$cinematic_lyrics_placement_text",
      "$cinematic_lyrics_placement_help",gCinematicLyrics::Placement());

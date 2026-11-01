@@ -40,7 +40,11 @@ static tConfItem< int > sg_cinematicLyricsRedConf( "CINEMATIC_LYRICS_RED", sg_ci
 static tConfItem< int > sg_cinematicLyricsGreenConf( "CINEMATIC_LYRICS_GREEN", sg_cinematicLyricsRGB[1] );
 static tConfItem< int > sg_cinematicLyricsBlueConf( "CINEMATIC_LYRICS_BLUE", sg_cinematicLyricsRGB[2] );
 
+static bool sg_cinematicLyricsStationary = false;
+static tConfItem< bool > sg_cinematicLyricsStationaryConf( "CINEMATIC_LYRICS_STATIONARY", sg_cinematicLyricsStationary );
+
 bool & gCinematicLyrics::Enabled(){ return sg_cinematicLyrics; }
+bool & gCinematicLyrics::Stationary(){ return sg_cinematicLyricsStationary; }
 int & gCinematicLyrics::ColorMode(){ return sg_cinematicLyricsColor; }
 int & gCinematicLyrics::Custom( int channel ){ return sg_cinematicLyricsRGB[ channel < 0 ? 0 : ( channel > 2 ? 2 : channel ) ]; }
 
@@ -300,7 +304,9 @@ struct cl_View
     cl_Line current;
     REAL shown = 0;         // seconds the current line has been visible
     bool hasFrame = false;
-    cl_Frame frame;
+    cl_Frame frame;         // in front of the cycle, follows it
+    bool pinned = false;    // the current line stays where it appeared
+    cl_Frame pin;           // where, if so
     std::vector< cl_Fading > fading;
 };
 
@@ -427,10 +433,11 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
         {
             cl_Fading f;
             f.line = v.current;
-            f.frame = v.frame;
+            f.frame = v.pinned ? v.pin : v.frame;
             f.shown = v.shown;
             v.fading.push_back( f );
             v.current = cl_Line();
+            v.pinned = false;
         }
         v.trackVersion = v.info.trackVersion;
         gSpotify::NowPlaying( v.info, true );
@@ -474,10 +481,11 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
         {
             cl_Fading f;
             f.line = v.current;
-            f.frame = v.frame;
+            f.frame = v.pinned ? v.pin : v.frame;
             f.shown = v.shown;
             v.fading.push_back( f );
         }
+        v.pinned = false;
         REAL const previousSide = v.current.side;
         v.current = cl_Line();
         v.current.side = previousSide;
@@ -497,8 +505,21 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     else if ( v.info.playing )
         v.shown += dt;
 
-    // slide toward the middle if the wall gets in the way, and back out when there is room again
-    v.current.sideNow = cl_Approach( v.current.sideNow, cl_FreeSide( v.frame, v.current.side ), 4, dt );
+    if ( sg_cinematicLyricsStationary )
+    {
+        // the line stays on the spot in front of where the cycle was when it appeared
+        if ( !v.pinned )
+        {
+            v.pin = v.frame;
+            v.pinned = true;
+        }
+    }
+    else
+    {
+        v.pinned = false;
+        // slide toward the middle if the wall gets in the way, and back out when there is room again
+        v.current.sideNow = cl_Approach( v.current.sideNow, cl_FreeSide( v.frame, v.current.side ), 4, dt );
+    }
 
     tColor const glow = GlowColor( color );
 
@@ -525,7 +546,7 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     }
 
     if ( !v.current.words.empty() )
-        cl_DrawLine( v.current, v.frame, standing, v.shown, 1, 0, glow );
+        cl_DrawLine( v.current, v.pinned ? v.pin : v.frame, standing, v.shown, 1, 0, glow );
 
     glDepthMask( GL_TRUE );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );

@@ -2656,6 +2656,8 @@ pref_trail_age_text		Trail Age Line:
 pref_trail_age_help		This is an experimental feature, using this feature in ranked matches may be prohibited and could get you banned.
 cinematic_lyrics_text	Cinematic Lyrics:
 cinematic_lyrics_help	Shows the Spotify lyrics in the arena as big 3D words in front of your cycle, one word at a time, glowing in your cycle color. Turns off the lyrics in the HUD while it is on.
+cinematic_lyrics_stationary_text	Stationary Cinematic Lyrics:
+cinematic_lyrics_stationary_help	Each lyric line stays on the spot in the arena where it appeared, instead of moving along in front of your cycle. You drive past it, and the next line appears in front of you again.
 cinematic_lyrics_placement_text	Cinematic Lyrics Placement:
 cinematic_lyrics_placement_help	How the cinematic lyrics sit in the arena.
 cinematic_lyrics_placement_0_text	On the floor
