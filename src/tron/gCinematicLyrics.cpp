@@ -92,6 +92,9 @@ REAL const cl_rowGap     = 1.15;  // row distance, in word heights
 REAL const cl_ahead      = 26;    // how far in front of the cycle the lyrics float
 REAL const cl_depth      = .55;   // how thick the letters are
 int  const cl_layers     = 7;     // slices that make up the thickness
+REAL const cl_sideMin    = 7;     // a line off to the side sits at least this far from the middle
+REAL const cl_sideMax    = 15;    // and at most this far
+REAL const cl_yaw        = .8;    // degrees a line is turned per unit it sits to the side
 REAL const cl_fontHeight = .2;    // font size the glyphs are made at, in screen units
 
 REAL cl_Clamp( REAL v, REAL lo, REAL hi )
@@ -134,6 +137,8 @@ struct cl_Line
     int index = -1;
     int startMs = 0;
     REAL bottom = 0;  // lowest point of the letters, below the center
+    REAL side = 0;     // where the line wants to be, sideways from straight ahead (right is positive)
+    REAL sideNow = 0;  // where it is, pulled toward the middle when the wall is in the way
     std::vector< cl_Word > words;
 };
 
@@ -248,6 +253,37 @@ struct cl_Frame
     tCoord pos, dir;
 };
 
+//! where line number index goes sideways: mostly left or right, away from where the last line was, sometimes in the middle
+REAL cl_Side( int index, REAL lastSide )
+{
+    REAL const r = cl_Random( 0x51ed27u + 977u * index );
+    if ( r < .2 )
+        return 0;
+    REAL const distance = cl_sideMin + ( cl_sideMax - cl_sideMin ) * cl_Random( 0x2545f491u + 131u * index );
+    REAL sign = lastSide > .5 ? -1 : ( lastSide < -.5 ? 1 : ( r < .6 ? -1 : 1 ) );
+    return sign * distance;
+}
+
+//! as far to the side as wanted, or less if the line would end up in the wall
+REAL cl_FreeSide( cl_Frame const & frame, REAL side )
+{
+    tCoord const right = frame.dir.Turn( 0, -1 );
+    REAL const margin = cl_wordHeight * 1.5;
+    if ( eWallRim::IsBound( frame.pos + right * side, margin ) )
+        return side;
+    REAL lo = 0, hi = side;
+    for ( int i = 0; i < 10; ++i )
+    {
+        REAL const mid = ( lo + hi ) * .5;
+        if ( eWallRim::IsBound( frame.pos + right * mid, margin ) )
+            lo = mid;
+        else
+            hi = mid;
+    }
+    return lo;
+}
+
+
 struct cl_Fading
 {
     cl_Line line;
@@ -343,8 +379,16 @@ void cl_DrawWord( cl_Word const & w, REAL t, REAL fade, tColor const & glow )
 
 void cl_DrawLine( cl_Line const & line, cl_Frame const & frame, bool standing, REAL shown, REAL fade, REAL lift, tColor const & glow )
 {
+    // moved to the side, and turned a little so it slants toward the middle
+    cl_Frame shifted = frame;
+    shifted.pos = frame.pos + frame.dir.Turn( 0, -1 ) * line.sideNow;
     glPushMatrix();
-    cl_Basis( frame, standing, lift, line.bottom );
+    cl_Basis( shifted, standing, lift, line.bottom );
+    REAL const yaw = -line.sideNow * cl_yaw;
+    if ( standing )
+        glRotatef( yaw, 0, 1, 0 );
+    else
+        glRotatef( yaw, 0, 0, 1 );
     for ( cl_Word const & w: line.words )
         cl_DrawWord( w, shown - w.appear, fade, glow );
     glPopMatrix();
@@ -434,12 +478,17 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
             f.shown = v.shown;
             v.fading.push_back( f );
         }
+        REAL const previousSide = v.current.side;
         v.current = cl_Line();
+        v.current.side = previousSide;
         v.shown = 0;
         if ( current >= 0 )
         {
             int const next = current + 1 < int( v.info.lines.size() ) ? v.info.lines[ current + 1 ].ms : v.info.durationMs;
+            REAL const lastSide = v.current.side;
             cl_Layout( v.current, v.info.lines[ current ].text, current, next - v.info.lines[ current ].ms );
+            v.current.side = cl_Side( current, lastSide );
+            v.current.sideNow = cl_FreeSide( v.frame, v.current.side );
             v.current.startMs = v.info.lines[ current ].ms;
             // joined in the middle of the line: show what was already sung
             v.shown = cl_Clamp( ( v.info.progressMs - v.current.startMs ) * .001, 0, 30 );
@@ -447,6 +496,9 @@ void gCinematicLyrics::Render( void const * viewer, tCoord const & pos, tCoord c
     }
     else if ( v.info.playing )
         v.shown += dt;
+
+    // slide toward the middle if the wall gets in the way, and back out when there is room again
+    v.current.sideNow = cl_Approach( v.current.sideNow, cl_FreeSide( v.frame, v.current.side ), 4, dt );
 
     tColor const glow = GlowColor( color );
 
