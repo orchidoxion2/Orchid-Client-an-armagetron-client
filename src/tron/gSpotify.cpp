@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "gSpotify.h"
+#include "gCinematicLyrics.h"
 
 #include "aa_config.h"
 #include "tConfiguration.h"
@@ -1179,10 +1180,11 @@ static void sp_Update( sp_Shared & s )
         if ( !s.refreshToken.empty() && s.login == SP_LOGGED_OUT )
             s.login = SP_LOGGED_IN;
     }
-    if ( s.enabled != sg_spotifyEnabled || s.lyrics != sg_spotifyLyrics )
+    bool const lyrics = sg_spotifyLyrics || gCinematicLyrics::Enabled();
+    if ( s.enabled != sg_spotifyEnabled || s.lyrics != lyrics )
     {
         s.enabled = sg_spotifyEnabled;
-        s.lyrics = sg_spotifyLyrics;
+        s.lyrics = lyrics;
         s.wake.notify_all();
     }
     if ( !s.started && ( s.enabled || s.listener != sp_noSocket ) )
@@ -1316,7 +1318,7 @@ tString gSpotify::Lyric()
     std::lock_guard< std::mutex > lock( s.mutex );
     sp_Update( s );
     tString ret;
-    if ( !s.enabled || !s.lyrics || s.title.empty() || !s.playing || s.lyricLines.empty() )
+    if ( !s.enabled || !s.lyrics || gCinematicLyrics::Enabled() || s.title.empty() || !s.playing || s.lyricLines.empty() )
         return ret;
     int position = s.progressMs + int( std::chrono::duration_cast< std::chrono::milliseconds >( sp_Clock::now() - s.progressTime ).count() );
     std::string const * line = NULL;
@@ -1347,7 +1349,7 @@ bool gSpotify::NowPlaying( gSpotifyNowPlaying & info, bool withLines )
         info.progressMs += int( std::chrono::duration_cast< std::chrono::milliseconds >( sp_Clock::now() - s.progressTime ).count() );
     if ( info.durationMs > 0 )
         info.progressMs = std::min( info.progressMs, info.durationMs );
-    info.showLyrics = s.lyrics;
+    info.showLyrics = sg_spotifyLyrics && !gCinematicLyrics::Enabled();
     info.trackVersion = s.trackVersion;
     info.lyricsState = s.lyricsFor.empty() ? gSpotifyNowPlaying::LYRICS_SEARCHING : s.lyricsState;
     info.lyricsError = tColoredString::RemoveColors( s.lyricsError.c_str() );

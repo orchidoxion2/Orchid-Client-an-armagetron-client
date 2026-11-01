@@ -175,10 +175,13 @@ bool restrictLineHeight( float const &newValue )
 float sr_lineHeight = 1.;
 static tConfItem< float > sr_lineHeightconf( "LINE_HEIGHT", sr_lineHeight, &restrictLineHeight );
 
+static bool sr_textAdditive = false;  // text adds light instead of covering, set while drawing glows
+
 class rFontContainer : std::map<int, FTFont *> {
     FTFont &New(int size);
     FTFont *Load(tString const &path);
     bool chat_;              // the font for the console text, set by CHAT_FONT
+    char const * file_ = 0;  // a fixed font file in textures/, if any
     float sizeFactor_ = .8;  // guess, then improve
     std::map< FTFont *, std::set< unsigned int > > made_;  // characters each font already has glyphs for
 
@@ -207,7 +210,7 @@ class rFontContainer : std::map<int, FTFont *> {
         return font;
     }
 public:
-    explicit rFontContainer( bool chat = false ): chat_( chat ){}
+    explicit rFontContainer( bool chat = false, char const * file = 0 ): chat_( chat ), file_( file ){}
     void clear() {
         for(iterator i = begin(); i != end(); ++i) {
             delete i->second;
@@ -235,7 +238,7 @@ public:
             if(sr_fontType == sr_fontTexture) {
                 glEnable(GL_TEXTURE_2D);
                 glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glBlendFunc(GL_SRC_ALPHA, sr_textAdditive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA);
             }
             if(sr_fontType == sr_fontExtruded) {
                 glEnable( GL_DEPTH_TEST);
@@ -356,7 +359,9 @@ FTFont &rFontContainer::New(int size) {
     FTFont *font;
     tString theFontFile("");
 
-    if(chat_ && *sr_ChatFontFile()) {
+    if(file_) {
+        theFontFile = tDirectories::Data().GetReadPath(tString("textures/") + file_);
+    } else if(chat_ && *sr_ChatFontFile()) {
         theFontFile = tDirectories::Data().GetReadPath(tString("textures/") + sr_ChatFontFile());
     } else if(useCustomFont == 1) {
         theFontFile = customFont;
@@ -382,6 +387,7 @@ FTFont &rFontContainer::New(int size) {
 }
 rFontContainer sr_Font;
 static rFontContainer sr_ChatFont( true );
+static rFontContainer sr_LyricsFont( false, "Caveat-SemiBold.ttf" );
 
 static rFontContainer & sr_FontFor( sr_fontClass type )
 {
@@ -392,12 +398,27 @@ static rFontContainer & sr_FontFor( sr_fontClass type )
         sr_ChatFont.clear();
         loaded = sr_chatFont;
     }
+    if ( type == sr_fontLyrics )
+        return sr_LyricsFont;
     return type == sr_fontConsole && *sr_ChatFontFile() ? sr_ChatFont : sr_Font;
+}
+
+float sr_LyricsTextWidth( tString const & text, float height ) {
+    STRING_TO_FTGL( text, str );
+    return sr_LyricsFont.GetWidth( str, height );
+}
+
+void sr_LyricsTextRender( tString const & text, float height, float x, float y, bool additive ) {
+    STRING_TO_FTGL( text, str );
+    sr_textAdditive = additive;
+    sr_LyricsFont.Render( str, height, tCoord( x, y ) );
+    sr_textAdditive = false;
 }
 
 void sr_ReloadFont(void) {
     sr_Font.clear();
     sr_ChatFont.clear();
+    sr_LyricsFont.clear();
 }
 #endif
 

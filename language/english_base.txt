@@ -2643,6 +2643,14 @@ pref_uppersky_help		Toggles the display of the upper sky, a solid plane similar 
 
 pref_trail_age_text		Trail Age Line:
 pref_trail_age_help		This is an experimental feature, using this feature in ranked matches may be prohibited and could get you banned.
+cinematic_lyrics_text	Cinematic Lyrics:
+cinematic_lyrics_help	Shows the Spotify lyrics in the arena as big 3D words in front of your cycle, one word at a time, glowing in your cycle color. Turns off the lyrics in the HUD while it is on.
+cinematic_lyrics_placement_text	Cinematic Lyrics Placement:
+cinematic_lyrics_placement_help	How the cinematic lyrics sit in the arena.
+cinematic_lyrics_placement_0_text	On the floor
+cinematic_lyrics_placement_0_help	The words lie on the floor in front of you, like they are painted on it.
+cinematic_lyrics_placement_1_text	Standing
+cinematic_lyrics_placement_1_help	The words stand up on the floor in front of you, facing you.
 pref_trail_height_text		Trail Height:
 pref_trail_height_help		How high the cycle trails are drawn. Only changes the look; the game plays the same.
 pref_trail_height_100_text	100% (original)

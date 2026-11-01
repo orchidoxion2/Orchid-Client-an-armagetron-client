@@ -27,6 +27,8 @@ The `gGame` class inherits from `nNetObject` for network synchronization. Game s
 ├── gArmagetron.cpp        # Main game entry point
 ├── gCamera.cpp            # Game camera control
 ├── gCamera.h             # Game camera control header
+├── gCinematicLyrics.cpp   # Spotify lyrics drawn as 3D words in the arena (CINEMATIC_LYRICS)
+├── gCinematicLyrics.h    # Cinematic lyrics header; drawn from gCycle::RenderCockpitVirtual
 ├── gCycle.cpp             # Lightcycle game logic
 ├── gCycle.h              # Lightcycle game logic header
 ├── gCycleMovement.cpp     # Cycle movement physics

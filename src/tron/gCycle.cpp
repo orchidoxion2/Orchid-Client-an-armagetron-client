@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "eEventNotification.h"
 #include "gCycle.h"
+#include "gCinematicLyrics.h"
 #include "nConfig.h"
 #include "rModel.h"
 //#include "eTess.h"
@@ -5094,6 +5095,10 @@ void gCycle::RenderName( const eCamera* cam ) {
     glPopMatrix();
 }
 
+
+void gCycle::RenderCockpitVirtual(bool){
+    gCinematicLyrics::Render( this, pos, dir, color_ );
+}
 
 bool gCycle::RenderCockpitFixedBefore(bool){
     /*

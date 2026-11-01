@@ -99,6 +99,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "gArena.h"
 #include "gSpotify.h"
+#include "gCinematicLyrics.h"
 #include "eFloor.h"
 #include "cockpit/cLeaderboard.h"
 #include "gCockpitEditor.h"
@@ -2858,6 +2859,14 @@ void MainMenu(bool ingame){
 
 
     uMenu experimental("$settings_experimental_text");
+    uMenuItemSelection<int> cinematicPlacement
+    (&experimental,"$cinematic_lyrics_placement_text",
+     "$cinematic_lyrics_placement_help",gCinematicLyrics::Placement());
+    cinematicPlacement.NewChoice("$cinematic_lyrics_placement_0_text","$cinematic_lyrics_placement_0_help",0);
+    cinematicPlacement.NewChoice("$cinematic_lyrics_placement_1_text","$cinematic_lyrics_placement_1_help",1);
+    uMenuItemToggle cinematicLyrics
+    (&experimental,"$cinematic_lyrics_text",
+     "$cinematic_lyrics_help",gCinematicLyrics::Enabled());
     uMenuItemToggle trailAgeLine
     (&experimental,"$pref_trail_age_text",
      "$pref_trail_age_help",sg_cycleTrailAgeLine);

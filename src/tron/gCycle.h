@@ -344,6 +344,7 @@ public:
     virtual void RenderName( const eCamera *cam );
 
     bool RenderCockpitFixedBefore(bool primary=true) override;
+    void RenderCockpitVirtual(bool primary=false) override;  //!< the cinematic lyrics in front of the cycle
 
     void SoundMix(Sint16 *dest,unsigned int len,
                   int viewer,REAL rvol,REAL lvol, REAL dopplerPitch) override;

@@ -171,7 +171,8 @@ libtron_a_SOURCES=tron/gAIBase.cpp tron/gAIBase.h tron/gAICharacter.cpp tron/gAI
 	tron/cockpit/cLeaderboard.h tron/cockpit/cLeaderboard.cpp\
 	tron/gFriends.h tron/gFriends.cpp \
 	tron/gSpotify.h tron/gSpotify.cpp \
-	tron/gCockpitEditor.h tron/gCockpitEditor.cpp
+	tron/gCockpitEditor.h tron/gCockpitEditor.cpp \
+	tron/gCinematicLyrics.h tron/gCinematicLyrics.cpp
 
 if BUILDZONESV2
 libtron_a_SOURCES +=\

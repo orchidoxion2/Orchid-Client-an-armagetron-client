@@ -74,7 +74,8 @@ enum sr_fontClass {
     sr_fontCenterMessage = 00200, //!< for CENTER_MESSAGEs
     sr_fontServerBrowser = 00400, //!< for the LAN and master server browser
     sr_fontCycleLabel    = 01000, //!< for the player name displayed over cycles
-    sr_fontServerDetails = 02000  //!< for the details displayed in the server browser (server description, player names etc)
+    sr_fontServerDetails = 02000, //!< for the details displayed in the server browser (server description, player names etc)
+    sr_fontLyrics        = 04000  //!< for the cinematic lyrics, always the handwritten Caveat font
 };
 
 //! Different ways to render fonts
@@ -89,6 +90,14 @@ enum sr_fontTypes {
 };
 
 extern int sr_fontType;
+
+#ifndef DEDICATED
+class tString;
+//! the width of text in the cinematic lyrics font, in the same units as other text
+float sr_LyricsTextWidth( tString const & text, float height );
+//! draws text in the cinematic lyrics font, (x,y) is the left end of the baseline; set the color first; additive adds light, for glows
+void sr_LyricsTextRender( tString const & text, float height, float x, float y, bool additive = false );
+#endif
 
 class FTFont;
 
