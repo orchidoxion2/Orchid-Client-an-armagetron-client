@@ -30,6 +30,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "aa_config.h"
 
 #include "rTexture.h"
+#include <cstring>
+#include "tConfiguration.h"
 #include "rDisplayList.h"
 #include "tString.h"
 #include "rScreen.h"
@@ -800,6 +802,49 @@ void rISurfaceTexture::Upload( rSurface const & surface )
 //!
 // ******************************************************************************************
 
+#ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
+#define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
+#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84FF
+#endif
+
+// ANISOTROPIC_FILTERING: keeps textures seen at a flat angle, like the floor, sharp. 0 or 1 is off.
+int sr_anisotropy = 16;
+static tConfItem<int> sr_anisotropyConf( "ANISOTROPIC_FILTERING", sr_anisotropy );
+
+#ifndef DEDICATED
+static float sr_maxAnisotropy = -1;  // what the graphics card allows; -1 not asked yet
+static void sr_ForgetMaxAnisotropy(){ sr_maxAnisotropy = -1; }
+static rCallbackBeforeScreenModeChange sr_forgetAnisotropy( &sr_ForgetMaxAnisotropy );
+#endif
+
+void sr_ApplyAnisotropy( int texmod )
+{
+#ifndef DEDICATED
+    // only mipmapped textures profit from it
+    if ( texmod != GL_LINEAR_MIPMAP_LINEAR && texmod != GL_LINEAR_MIPMAP_NEAREST &&
+         texmod != GL_NEAREST_MIPMAP_LINEAR && texmod != GL_NEAREST_MIPMAP_NEAREST )
+        return;
+    if ( sr_maxAnisotropy < 0 )
+    {
+        sr_maxAnisotropy = 0;
+        char const * extensions = reinterpret_cast< char const * >( glGetString( GL_EXTENSIONS ) );
+        char const * renderer = reinterpret_cast< char const * >( glGetString( GL_RENDERER ) );
+        // drawing without a graphics card: anisotropic filtering would cost most of the frame rate there
+        bool const software = renderer && ( strstr( renderer, "llvmpipe" ) || strstr( renderer, "softpipe" ) ||
+                                            strstr( renderer, "Software" ) || strstr( renderer, "GDI Generic" ) ||
+                                            strstr( renderer, "SwiftShader" ) );
+        if ( !software && extensions && strstr( extensions, "GL_EXT_texture_filter_anisotropic" ) )
+            glGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &sr_maxAnisotropy );
+    }
+    if ( sr_maxAnisotropy < 1 )
+        return;
+    float amount = sr_anisotropy < 1 ? 1 : float( sr_anisotropy );
+    if ( amount > sr_maxAnisotropy )
+        amount = sr_maxAnisotropy;
+    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, amount );
+#endif
+}
+
 void rISurfaceTexture::OnSelect( bool enforce )
 {
 #ifndef DEDICATED
@@ -833,6 +878,7 @@ void rISurfaceTexture::OnSelect( bool enforce )
 
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
                                 texmod);
+                sr_ApplyAnisotropy( texmod );
 
                 switch(texmod)
                 {

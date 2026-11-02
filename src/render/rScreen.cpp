@@ -170,6 +170,29 @@ static tConfItem<rResolution> winsize("ARMAGETRON_WINDOWSIZE",currentScreensetti
 static tConfItem<rResolution> winsizeLast("ARMAGETRON_LAST_WINDOWSIZE",lastSuccess.windowSize.res);
 
 static tConfItem<rVSync> vSync("ARMAGETRON_VSYNC",currentScreensetting.vSync);
+
+// ANTIALIASING: samples per pixel for smooth edges, 0 is off; used when the window is made
+int sr_antiAliasing = 4;
+static tConfItem<int> sr_antiAliasingConf( "ANTIALIASING", sr_antiAliasing );
+
+// which Orchid Client graphics defaults the player's settings already got
+static int sr_graphicsDefaults = 0;
+static tConfItem<int> sr_graphicsDefaultsConf( "ORCHID_GRAPHICS_DEFAULTS", sr_graphicsDefaults );
+
+void sr_ApplyGraphicsDefaults()
+{
+#ifndef DEDICATED
+    // 1: the best looking settings and no frame rate cap, also for players who had the game before
+    if ( sr_graphicsDefaults < 1 )
+    {
+        currentScreensetting.vSync = ArmageTron_VSync_Off;
+        sr_maxFPS = 0;
+        sr_antiAliasing = 4;
+        sr_anisotropy = 16;
+        sr_graphicsDefaults = 1;
+    }
+#endif
+}
 static tConfItem<rVSync> vSyncLast("ARMAGETRON_VSYNC_LAST",lastSuccess.vSync);
 
 static tConfItem<int> screenres_w("ARMAGETRON_SCREENMODE_W",currentScreensetting.res.width);
@@ -385,7 +408,7 @@ int rScreenSize::Compare( rScreenSize const & other ) const
 // *******************************************************************************************
 
 rScreenSettings::rScreenSettings( rResolution r, bool fs, rColorDepth cd, bool ce )
-:res(r), windowSize(r), fullscreen(fs), colorDepth(cd), zDepth( ArmageTron_ColorDepth_Desktop ), checkErrors(true), displayIndex(0), refreshRate(0), vSync( ArmageTron_VSync_Default ), aspect (1)
+:res(r), windowSize(r), fullscreen(fs), colorDepth(cd), zDepth( ArmageTron_ColorDepth_Desktop ), checkErrors(true), displayIndex(0), refreshRate(0), vSync( ArmageTron_VSync_Off ), aspect (1)
 {
     // special case for desktop resolution: window size of 640x480
     if ( r == ArmageTron_Desktop )
@@ -496,6 +519,10 @@ static bool sr_SetSwapControlAuto( bool after = false )
 
 static void sr_SetGLAttributes( int rDepth, int gDepth, int bDepth, int zDepth )
 {
+    // anti-aliasing: smooth edges on everything drawn
+    int const samples = sr_antiAliasing >= 2 ? ( sr_antiAliasing > 16 ? 16 : sr_antiAliasing ) : 0;
+    SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, samples ? 1 : 0 );
+    SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, samples );
     // SDL 1.1 required
     SDL_GL_SetAttribute( SDL_GL_RED_SIZE, rDepth );
     SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, gDepth );
@@ -506,6 +533,20 @@ static void sr_SetGLAttributes( int rDepth, int gDepth, int bDepth, int zDepth )
 #endif
     SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, zDepth );
     SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+}
+
+// creates the game window; if the graphics card can't do the anti-aliasing, without it
+static SDL_Window * sr_CreateWindow( int x, int y, int w, int h, int flags )
+{
+    SDL_Window * window = SDL_CreateWindow( "", x, y, w, h, flags );
+    if ( !window && sr_antiAliasing >= 2 )
+    {
+        std::cerr << "Could not get anti-aliasing (" << SDL_GetError() << "), trying without.\n";
+        SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 0 );
+        SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, 0 );
+        window = SDL_CreateWindow( "", x, y, w, h, flags );
+    }
+    return window;
 }
 
 // to be called after screen initialization
@@ -765,13 +806,13 @@ static bool lowlevel_sr_InitDisplay(){
         // try fullscreen first if requested and sensible (only display 0 is supported)
         if (currentScreensetting.fullscreen && currentScreensetting.displayIndex == 0)
         {
-            sr_screen = SDL_CreateWindow("", defaultX, defaultY, sr_desktopWidth, sr_desktopHeight, attrib | SDL_WINDOW_FULLSCREEN_DESKTOP);
+            sr_screen = sr_CreateWindow(defaultX, defaultY, sr_desktopWidth, sr_desktopHeight, attrib | SDL_WINDOW_FULLSCREEN_DESKTOP);
         }
 
         // only reinit the screen if the desktop res detection hasn't left us
         // with a perfectly good one.
         if (!sr_screen &&
-            !(sr_screen = SDL_CreateWindow("", defaultX, defaultY, defaultWidth, defaultHeight, attrib))
+            !(sr_screen = sr_CreateWindow(defaultX, defaultY, defaultWidth, defaultHeight, attrib))
             )
         {
             lastError.Clear();
@@ -1740,6 +1781,14 @@ void sr_ResetRenderState(bool menu){
     #ifndef DEDICATED
 
     // Z-Buffering and perspective correction
+
+#ifndef GL_MULTISAMPLE
+#define GL_MULTISAMPLE 0x809D
+#endif
+    if ( sr_antiAliasing >= 2 )
+        glEnable( GL_MULTISAMPLE );
+    else
+        glDisable( GL_MULTISAMPLE );
 
     if (menu){
         glDisable(GL_DEPTH_TEST);

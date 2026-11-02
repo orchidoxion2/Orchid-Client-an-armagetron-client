@@ -2609,6 +2609,12 @@ detail_simple_trail_help    If activated, cycle trails are displayed in a simpli
 detail_dither_text		Dithering:
 detail_dither_help		If the colour depth of your current graphic mode does not directly allow the colour that is to be drawn, it is simulated by mixing other colours. Turning it of will improve software rendering performance on some systems; in low resolution modes, turning it off will even improve the visual quality (IMHO).
 
+detail_antialiasing_text	Anti-Aliasing:
+detail_antialiasing_help	Smooths the jagged edges of walls, cycles and lines. Higher looks smoother but needs a faster graphics card. Takes effect after restarting the game.
+detail_antialiasing_off_text	Off
+detail_anisotropic_text	Anisotropic Filtering:
+detail_anisotropic_help	Keeps the floor and walls sharp far away and at flat angles, instead of blurry. Takes effect after restarting the game.
+detail_anisotropic_off_text	Off
 detail_floor_text		Floor Detail:
 detail_floor_help		\g has several ways to draw the floor and the grid; the better looking ones will cost you some FPS (Frames Per Second).
 

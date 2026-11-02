@@ -460,4 +460,9 @@ const rSurface & rSurfaceTexture::GetSurface( void ) const
     return this->surface_;
 }
 
+//! ANISOTROPIC_FILTERING: how sharp textures stay at flat angles, 0 or 1 is off
+extern int sr_anisotropy;
+//! sets the anisotropic filtering of the bound texture, if its filter mode uses mipmaps
+void sr_ApplyAnisotropy( int texmod );
+
 #endif

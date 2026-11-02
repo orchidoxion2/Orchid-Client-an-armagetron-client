@@ -781,6 +781,27 @@ static uSelectEntry<int> mfdd(mfd,"$detail_floor_2tex_text",
                               "$detail_floor_2tex_help",
                               rFLOOR_TWOTEXTURE);
 
+static uMenuItemSelection<int> aniso
+(&screen_menu_detail,
+ "$detail_anisotropic_text",
+ "$detail_anisotropic_help",
+ sr_anisotropy);
+static uSelectEntry<int> aniso0(aniso,"$detail_anisotropic_off_text","$detail_anisotropic_help",0);
+static uSelectEntry<int> aniso2(aniso,"2x","$detail_anisotropic_help",2);
+static uSelectEntry<int> aniso4(aniso,"4x","$detail_anisotropic_help",4);
+static uSelectEntry<int> aniso8(aniso,"8x","$detail_anisotropic_help",8);
+static uSelectEntry<int> aniso16(aniso,"16x","$detail_anisotropic_help",16);
+
+static uMenuItemSelection<int> antialias
+(&screen_menu_detail,
+ "$detail_antialiasing_text",
+ "$detail_antialiasing_help",
+ sr_antiAliasing);
+static uSelectEntry<int> antialias0(antialias,"$detail_antialiasing_off_text","$detail_antialiasing_help",0);
+static uSelectEntry<int> antialias2(antialias,"2x","$detail_antialiasing_help",2);
+static uSelectEntry<int> antialias4(antialias,"4x","$detail_antialiasing_help",4);
+static uSelectEntry<int> antialias8(antialias,"8x","$detail_antialiasing_help",8);
+
 static uMenuItemToggle  abm
 (&screen_menu_detail,"$detail_alpha_text",
  "$detail_alpha_help",

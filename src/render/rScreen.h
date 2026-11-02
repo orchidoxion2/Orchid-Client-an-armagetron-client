@@ -216,4 +216,9 @@ void sr_SetWindowTitle();
 
 void sr_LockSDL();
 void sr_UnlockSDL();
+//! ANTIALIASING: samples per pixel for smooth edges, 0 is off; takes effect when the window is made
+extern int sr_antiAliasing;
+//! moves the player's settings to the current Orchid Client graphics defaults, once; call after loading the settings
+void sr_ApplyGraphicsDefaults();
+
 #endif

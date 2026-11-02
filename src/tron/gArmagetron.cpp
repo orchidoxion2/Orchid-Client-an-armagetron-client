@@ -689,7 +689,24 @@ struct SDLSoundCleanup
 #endif
 }
 
+#if defined( WIN32 ) && !defined( DEDICATED )
+#include <windows.h>
+// tell Windows the game draws at the screen's real resolution itself; otherwise, on screens
+// scaled to 125% or more, Windows draws it smaller and stretches it, which makes everything blurry
+static void sg_MakeDpiAware()
+{
+    typedef BOOL ( WINAPI * SetDpiAware )( void );
+    HMODULE user32 = GetModuleHandleA( "user32.dll" );
+    SetDpiAware set = user32 ? reinterpret_cast< SetDpiAware >( GetProcAddress( user32, "SetProcessDPIAware" ) ) : NULL;
+    if ( set )
+        set();
+}
+#endif
+
 int main(int argc,char **argv){
+#if defined( WIN32 ) && !defined( DEDICATED )
+    sg_MakeDpiAware();
+#endif
     //std::cout << "enter\n";
     //  net_test();
 
@@ -844,6 +861,9 @@ int main(int argc,char **argv){
         }
         if(tConfigMigration::SavedBefore(sn_configurationSavedInVersion, st_programVersion))
             sn_configurationSavedInVersion = st_programVersion;
+
+        // best looking graphics and no frame rate cap, once, for new and existing players
+        sr_ApplyGraphicsDefaults();
 
         // record and play back the recording debug level
         tRecorderSyncBase::GetDebugLevelPlayback();
