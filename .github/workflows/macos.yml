@@ -9,7 +9,7 @@ on:
     tags: ['v*']   # a version tag: the zips are added to the release with that name, if there is one
   workflow_dispatch:
   release:
-    types: [published]
+    types: [published, edited]   # edited: also when a release is moved to another tag
 
 permissions:
   contents: write
