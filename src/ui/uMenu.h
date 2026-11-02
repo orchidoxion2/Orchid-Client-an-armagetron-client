@@ -116,6 +116,10 @@ protected:
 
     REAL YPos(int num);
 public:
+    //! clicks on the chat and console text: open links (left button), copy a line (right button)
+    void SetConsoleClicks( bool on ){ consoleClicks_ = on; }
+    bool consoleClicks_ = false;
+
     static bool          wrap;
     
     // different quick exit types
@@ -594,6 +598,14 @@ public:
 // *****************************************************
 
 
+//! one entry of the suggestion list shown above a text field while typing
+struct uSuggestion
+{
+    tString text;       //!< what is suggested, e.g. a command name
+    tString help;       //!< a short explanation shown next to it
+    bool completes;     //!< Tab replaces the typed word with text
+};
+
 class uMenuItemString: public uMenuItem{
 protected:
     tOutput  description;
@@ -636,6 +648,13 @@ public:
 
     //! inserts an entire string at the current cursor
     bool Insert(tString const &insertion);
+
+    //! the suggestions for what is typed so far; none by default
+    virtual void GetSuggestions( std::vector< uSuggestion > & suggestions ){}
+    //! puts a suggestion into the field; by default replaces everything with its text and a space
+    virtual void ApplySuggestion( uSuggestion const & suggestion );
+    //! draws the suggestion list above the field at height y
+    void RenderSuggestions( REAL y, REAL alpha );
 };
 
 //! A class that can provide auto- completion and supports overwriting of parts for special cases.

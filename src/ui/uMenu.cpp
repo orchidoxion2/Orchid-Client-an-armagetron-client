@@ -598,6 +598,16 @@ void uMenu::HandleEvent( SDL_Event event )
         }
         break;
         case SDL_MOUSEBUTTONDOWN:
+            if ( consoleClicks_ && sr_screen )
+            {
+                // a click on the chat text: open a link, or copy the line with the right button
+                int w = 1, h = 1;
+                SDL_GetWindowSize( sr_screen, &w, &h );
+                REAL const cx = 2.0f * event.button.x / ( w > 0 ? w : 1 ) - 1;
+                REAL const cy = 1 - 2.0f * event.button.y / ( h > 0 ? h : 1 );
+                if ( sr_con.ClickAt( cx, cy, event.button.button == SDL_BUTTON_RIGHT ) )
+                    break;
+            }
             if ( event.button.button == SDL_BUTTON_LEFT )
             {
                 int item = ItemAt( event.button.x, event.button.y );
@@ -1756,6 +1766,66 @@ void uMenuItemString::Render(REAL x,REAL y,
 
     DisplayText(x-.02,y,description,selected,alpha,1);
     DisplayText(x+.02,y,*content,selected,alpha,-1,cmode,realCursorPos,colorMode);
+    if ( selected )
+        RenderSuggestions( y, alpha );
+#endif
+}
+
+void uMenuItemString::ApplySuggestion( uSuggestion const & suggestion )
+{
+    *content = suggestion.text;
+    *content << ' ';
+    realCursorPos = content->size();
+}
+
+void uMenuItemString::RenderSuggestions( REAL y, REAL alpha )
+{
+#ifndef DEDICATED
+    std::vector< uSuggestion > list;
+    GetSuggestions( list );
+    if ( list.empty() )
+        return;
+
+    int const shown = list.size() > 8 ? 8 : int( list.size() );
+    REAL const h = .045f, lineH = h * 1.3f;
+    REAL const left = -.97f, right = .6f;
+    REAL const bottom = y + .045f, top = bottom + ( shown + ( list.size() > size_t( shown ) ? 1 : 0 ) ) * lineH + .02f;
+
+    RenderEnd();
+    glDisable( GL_TEXTURE_2D );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glColor4f( .05f, .03f, .07f, .85f * alpha );
+    glRectf( left, bottom, right, top );
+    // the first one is what Tab takes
+    if ( list[0].completes )
+    {
+        glColor4f( .85f, .25f, .6f, .35f * alpha );
+        glRectf( left, top - .01f - lineH, right, top - .01f );
+    }
+
+    for ( int i = 0; i < shown; ++i )
+    {
+        tString line;
+        line << ( i == 0 && list[0].completes ? "0xffffff" : "0xd8d0dc" ) << list[i].text;
+        tString help = list[i].help;
+        if ( help.size() > 70 )
+        {
+            help = tString( help.substr( 0, 67 ) );
+            help << "...";
+        }
+        if ( !help.empty() )
+            line << "0x8c8494   " << help;
+        ::DisplayText( left + .02f, top - .01f - ( i + .5f ) * lineH, h, line, sr_fontMenu, -1 );
+    }
+    if ( list.size() > size_t( shown ) )
+    {
+        tString more;
+        more << "0x8c8494... " << int( list.size() - shown ) << " more";
+        ::DisplayText( left + .02f, top - .01f - ( shown + .5f ) * lineH, h, more, sr_fontMenu, -1 );
+    }
+    if ( list[0].completes )
+        ::DisplayText( right - .02f, top - .01f - .5f * lineH, h * .8f, tString( "0x8c8494Tab" ), sr_fontMenu, 1 );
 #endif
 }
 
@@ -1886,6 +1956,32 @@ bool uMenuItemString::Event(SDL_Event &e){
             ret = false;
 //            c.sym = SDLK_DOWN;
         }
+#if SDL_VERSION_ATLEAST(2,0,0)
+        // copy, cut and paste: Ctrl (Cmd on a Mac) with C, X or V
+        else if ( ( mod & ( KMOD_CTRL | KMOD_GUI ) ) && ( c.sym == SDLK_v || c.sym == SDLK_c || c.sym == SDLK_x ) ) {
+            if ( c.sym == SDLK_v ) {
+                char * clip = SDL_GetClipboardText();
+                if ( clip ) {
+                    std::string text( clip );
+                    SDL_free( clip );
+                    // one line only: line breaks and tabs become spaces
+                    for ( char & ch: text )
+                        if ( ch == '\n' || ch == '\r' || ch == '\t' )
+                            ch = ' ';
+                    if ( !text.empty() && utf8::is_valid( text.begin(), text.end() ) )
+                        Insert( tString( text ) );
+                }
+            }
+            else {
+                // copies all of it; there is no selection
+                SDL_SetClipboardText( content->c_str() );
+                if ( c.sym == SDLK_x ) {
+                    *content = tString();
+                    realCursorPos = 0;
+                }
+            }
+        }
+#else
 #ifdef MACOSX_XCODE
 #if SDL_VERSION_ATLEAST(2,0,0)
         else if (c.sym == SDLK_v && mod & KMOD_GUI) {
@@ -1936,6 +2032,7 @@ bool uMenuItemString::Event(SDL_Event &e){
                 }
             }
         }
+#endif
 #endif
 #if SDL_VERSION_ATLEAST(2,0,0)
         else
@@ -2320,6 +2417,13 @@ bool uMenuItemStringWithHistory::Event(SDL_Event &e){
     }
     else if (e.type==SDL_KEYDOWN &&
              (e.key.keysym.sym==SDLK_TAB && !m_Searchmode)){
+        std::vector< uSuggestion > suggestions;
+        GetSuggestions( suggestions );
+        if ( !suggestions.empty() && suggestions[0].completes )
+        {
+            ApplySuggestion( suggestions[0] );
+            return true;
+        }
         if(m_Completer != 0) {
             realCursorPos = m_Completer->Complete(*content, realCursorPos);
         }

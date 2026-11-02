@@ -26,6 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "gStuff.h"
+#include <string>
+#include "rConsole.h"
 #include "eCoord.h"
 #include "tConfiguration.h"
 #include "tResourceManager.h"
@@ -115,6 +117,24 @@ bool sg_OpenURI( char const * uri )
     return sg_OpenStuff( uri, true );
 #endif
 }
+
+#ifndef DEDICATED
+// links clicked in the chat: only web links, opened in the browser
+static void sg_OpenChatLink( char const * url )
+{
+    std::string const u( url );
+    if ( u.compare( 0, 7, "http://" ) != 0 && u.compare( 0, 8, "https://" ) != 0 )
+        return;
+    // nothing that could break out of the quotes of the command that opens it
+    if ( u.find_first_of( "'\"`\\ " ) != std::string::npos )
+        return;
+    sg_OpenURI( url );
+}
+static struct sg_ChatLinkOpener
+{
+    sg_ChatLinkOpener(){ rConsole::SetLinkOpener( &sg_OpenChatLink ); }
+} sg_chatLinkOpener;
+#endif
 
 bool sg_OpenDirectory( char const * path )
 {

@@ -159,6 +159,10 @@ public:
         return title;
     }
 
+    tOutput const & GetHelp() const {
+        return help;
+    }
+
     tAccessLevel GetRequiredLevel() const { return requiredLevel; }
     tAccessLevel GetSetLevel() const { return setLevel; }
     void         SetSetLevel( tAccessLevel level ) { setLevel = level; }

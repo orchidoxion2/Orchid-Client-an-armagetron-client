@@ -4750,6 +4750,50 @@ public:
         return uMenuItemString::Insert(insertion);
     }
 
+    //! while a chat command is typed (it starts with /), the commands it could be
+    void GetSuggestions( std::vector< uSuggestion > & suggestions ) override
+    {
+        tString const & typed = *content;
+        if ( typed.size() < 1 || typed[0] != '/' || typed.find( ' ' ) != std::string::npos )
+            return;
+        // the usual commands of Armagetron servers; a server may not have all of them, or have more
+        static char const * const commands[][2] = {
+            { "/me", "<text>  says what you do: \"* name text\"" },
+            { "/msg", "<player> <text>  a private message" },
+            { "/team", "<text>  a message only your team sees" },
+            { "/shout", "<text>  a message everyone sees, also in team chat mode" },
+            { "/players", "lists the players and their IDs" },
+            { "/listplayers", "lists the players and their IDs" },
+            { "/teams", "lists the teams and their players" },
+            { "/teamleave", "leaves your team" },
+            { "/teamshuffle", "moves you up or down in your team" },
+            { "/teamname", "<name>  renames your team" },
+            { "/invite", "<player>  invites a player to your team" },
+            { "/uninvite", "<player>  takes an invitation back" },
+            { "/invites", "lists the invitations" },
+            { "/lock", "locks your team, only invited players can join" },
+            { "/unlock", "unlocks your team" },
+            { "/spectate", "watches instead of playing" },
+            { "/ready", "says you are ready" },
+            { "/vote", "starts or answers a vote" },
+            { "/callvote", "starts a vote" },
+            { "/rtfm", "<player>  sends a player the server rules" },
+            { "/report", "<text>  reports something to the moderators" },
+            { "/login", "logs in to your account on the server" },
+            { "/logout", "logs out" },
+            { "/admin", "<command>  runs a command as admin" },
+            { "/admins", "lists the admins" },
+            { "/listadmins", "lists the admins" },
+            { "/help", "the server's help" },
+        };
+        std::string word( typed );
+        for ( char & c: word )
+            c = tolower( c );
+        for ( auto const & command: commands )
+            if ( std::string( command[0] ).compare( 0, word.size(), word ) == 0 )
+                suggestions.push_back( uSuggestion{ tString( command[0] ), tString( command[1] ), true } );
+    }
+
 };
 
 
@@ -4790,6 +4834,7 @@ static void do_chat(){
 
 
         eMenuItemChat s(&chat_menu,se_say,se_chatter,&completer);
+        chat_menu.SetConsoleClicks( true );
         auto *lastChatItem = se_chatItem;
         se_chatItem = &s;
         chat_menu.SetCenter(-.75);

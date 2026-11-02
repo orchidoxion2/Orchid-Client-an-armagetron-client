@@ -165,6 +165,11 @@ public:
         return top - cheight * y;
     }
 
+    //! the text row the next character goes to, counted from the top
+    int Row() const{
+        return y;
+    }
+
 
     REAL GetLeft() const{
         return left;

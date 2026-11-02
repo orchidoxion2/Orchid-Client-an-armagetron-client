@@ -92,6 +92,13 @@ public:
 
     //! returns whether a center display is currently in progress
     static bool CenterDisplayActive();
+
+    //! a click on the chat text at screen position x, y (-1 to 1): opens the link in the line under it,
+    //! or with copy, copies the line; returns whether the click was used
+    bool ClickAt( REAL x, REAL y, bool copy );
+
+    //! sets the function that opens a link in the web browser
+    static void SetLinkOpener( void ( * opener )( char const * url ) );
 };
 
 

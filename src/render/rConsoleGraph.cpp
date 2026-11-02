@@ -33,6 +33,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "rRender.h"
 #include "tSysTime.h"
 #include "rConsole.h"
+#include "rSDL.h"
+#include <cctype>
+#include <cstring>
+#include <vector>
 #include "rSysdep.h"
 #include "rScreen.h"
 #include "rGL.h"
@@ -101,6 +105,142 @@ static tConfigMigration migrate([](tString const &savedInVersion){
         sr_columns = 0;
     }
 });
+}
+
+// links in the chat: where each drawn line is, to find the one under a click
+namespace
+{
+    struct sr_ConsoleRow
+    {
+        REAL top, bottom;
+        tString text;
+    };
+    std::vector< sr_ConsoleRow > sr_consoleRows;
+    void ( * sr_linkOpener )( char const * url ) = 0;
+
+    bool sr_IsHex( char c )
+    {
+        return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' );
+    }
+
+    // characters that may be part of a link; quotes and anything unusual end it
+    bool sr_LinkChar( char c )
+    {
+        return ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) ||
+               strchr( "-._~:/?#[]@!$&()*+,;=%", c ) != 0;
+    }
+
+    // the links in s (start, length), found by http://, https:// or www. at the start of a word
+    std::vector< std::pair< size_t, size_t > > sr_FindLinks( std::string const & s )
+    {
+        std::vector< std::pair< size_t, size_t > > links;
+        std::string lower( s );
+        for ( char & c: lower )
+            c = tolower( c );
+        size_t i = 0;
+        while ( i < lower.size() )
+        {
+            size_t const http = lower.find( "http://", i ), https = lower.find( "https://", i ), www = lower.find( "www.", i );
+            size_t start = std::min( http, std::min( https, www ) );
+            if ( start == std::string::npos )
+                break;
+            // must begin a word (www. inside http://www. is part of that link)
+            if ( start > 0 && sr_LinkChar( s[ start - 1 ] ) )
+            {
+                i = start + 1;
+                continue;
+            }
+            size_t end = start;
+            while ( end < s.size() && sr_LinkChar( s[end] ) )
+            {
+                // a color code (0x and six hex digits) ends the link
+                if ( s[end] == '0' && end + 8 <= s.size() && ( s[end+1] == 'x' || s[end+1] == 'X' ) )
+                {
+                    bool hex = true;
+                    for ( size_t m = 2; m < 8; ++m )
+                        hex = hex && sr_IsHex( s[end+m] );
+                    if ( hex )
+                        break;
+                }
+                ++end;
+            }
+            // punctuation after a link belongs to the sentence
+            while ( end > start && strchr( ".,;:!?)]'", s[ end - 1 ] ) )
+                --end;
+            if ( end > start + 8 )
+                links.push_back( std::make_pair( start, end - start ) );
+            i = end > start ? end : start + 1;
+        }
+        return links;
+    }
+
+    // the line with its links in a link color and underlined look, then back to the color before
+    tString sr_HighlightLinks( tString const & line )
+    {
+        auto links = sr_FindLinks( line );
+        if ( links.empty() )
+            return line;
+        tString out;
+        size_t done = 0;
+        for ( auto const & link: links )
+        {
+            // the color in effect where the link starts, to go back to after it
+            std::string color = "0xRESETT";
+            for ( size_t k = 0; k + 8 <= link.first; ++k )
+                if ( line[k] == '0' && ( line[k+1] == 'x' || line[k+1] == 'X' ) )
+                {
+                    bool hex = true;
+                    for ( size_t m = 2; m < 8; ++m )
+                        hex = hex && sr_IsHex( line[k+m] );
+                    if ( hex || line.substr( k + 2, 6 ) == "RESETT" )
+                        color = line.substr( k, 8 );
+                }
+            out << line.substr( done, link.first - done ) << "0x5fb4ff" << line.substr( link.first, link.second ) << color;
+            done = link.first + link.second;
+        }
+        out << line.substr( done );
+        return out;
+    }
+}
+
+void rConsole::SetLinkOpener( void ( * opener )( char const * url ) )
+{
+    sr_linkOpener = opener;
+}
+
+bool rConsole::ClickAt( REAL x, REAL y, bool copy )
+{
+#ifndef DEDICATED
+    for ( auto const & row: sr_consoleRows )
+    {
+        if ( y > row.top || y < row.bottom )
+            continue;
+        tString const plain = tColoredString::RemoveColors( row.text );
+        if ( copy )
+        {
+            // the line without its colors and line break
+            std::string text( plain );
+            while ( !text.empty() && ( text.back() == '\n' || text.back() == ' ' ) )
+                text.pop_back();
+            SDL_SetClipboardText( text.c_str() );
+            DoCenterDisplay( tString( "Copied to the clipboard" ), 1.2f, .75f, .75f, .8f );
+            return true;
+        }
+        auto links = sr_FindLinks( plain );
+        if ( links.empty() || !sr_linkOpener )
+            return false;
+        std::string url = plain.substr( links[0].first, links[0].second );
+        std::string lower( url );
+        for ( char & c: lower )
+            c = tolower( c );
+        if ( lower.compare( 0, 4, "www." ) == 0 )
+            url = "https://" + url;
+        sr_linkOpener( url.c_str() );
+        DoCenterDisplay( tString( "Opening " ) + tString( url ), 1.5f, .37f, .7f, 1 );
+        return true;
+    }
+#endif
+    return false;
 }
 
 void rConsole::Render(){
@@ -249,11 +389,20 @@ void rConsole::Render(){
             }
 
             int i;
+            sr_consoleRows.clear();
             for (i=currentTop;i<=currentIn && i<=currentTop+MaxHeight();i++)
                 if (lines[i].Len()>1){
                     rTextField::SetDefaultColor( tColor(1,1,1) );
-                    out << lines[i];
+                    int const rowBefore = out.Row();
+                    out << sr_HighlightLinks( lines[i] );
                     out.ResetColor();
+                    // remember where the line went, for clicks on links
+                    int const rowAfter = out.Row() > rowBefore ? out.Row() : rowBefore + 1;
+                    sr_ConsoleRow row;
+                    row.top = out.GetTop() - rowBefore * out.GetCHeight();
+                    row.bottom = out.GetTop() - rowAfter * out.GetCHeight();
+                    row.text = lines[i];
+                    sr_consoleRows.push_back( row );
                 }
             if (i<currentIn){
                 // rTextField::SetDefaultColor( tColor(1,.8,.5) );

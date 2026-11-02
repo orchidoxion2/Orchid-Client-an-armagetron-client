@@ -47,6 +47,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "uInput.h"
 
 #include <sstream>
+#include <cctype>
 #include <set>
 #include <ctime>
 #include <vector>
@@ -961,6 +962,79 @@ public:
     gMemuItemConsole(uMenu *M,tString &c, uAutoCompleter *completer); //!< Constructor
     virtual ~gMemuItemConsole(){}
     bool Event(SDL_Event &e);
+
+    //! matching settings and commands while the first word is typed; then the chosen one's value and help
+    void GetSuggestions( std::vector< uSuggestion > & suggestions ) override
+    {
+        tString const typed = *content;
+        if ( typed == lastTyped_ )
+        {
+            suggestions = last_;
+            return;
+        }
+        lastTyped_ = typed;
+        last_.clear();
+
+        size_t first = typed.find_first_not_of( ' ' );
+        if ( first == std::string::npos )
+        {
+            suggestions = last_;
+            return;
+        }
+        size_t const space = typed.find( ' ', first );
+        std::string word = typed.substr( first, space == std::string::npos ? std::string::npos : space - first );
+        for ( char & c: word )
+            c = toupper( c );
+
+        // the help text, if there is one; a missing translation shows as its own name (..._help)
+        auto help = []( tConfItemBase const * item )
+        {
+            tString h( item->GetHelp() );
+            bool const missing = h.find( ' ' ) == std::string::npos && ( h.size() == 0 || h[0] == '$' || ( h.size() > 5 && h.substr( h.size() - 5 ) == "_help" ) );
+            return missing ? tString() : h;
+        };
+        if ( space == std::string::npos )
+        {
+            static std::deque< tString > commands = tConfItemBase::GetCommands();
+            std::vector< tString > exact, starts;
+            for ( tString const & command: commands )
+            {
+                std::string upper( command );
+                for ( char & c: upper )
+                    c = toupper( c );
+                if ( upper == word )
+                    exact.push_back( command );
+                else if ( upper.compare( 0, word.size(), word ) == 0 )
+                    starts.push_back( command );
+            }
+            std::sort( starts.begin(), starts.end() );
+            for ( auto const * group: { &exact, &starts } )
+                for ( tString const & command: *group )
+                {
+                    tConfItemBase const * item = tConfItemBase::FindConfigItem( command );
+                    // the setting's real name, in capitals like in config files
+                    tString name( item ? item->GetTitle() : command );
+                    last_.push_back( uSuggestion{ name, item ? help( item ) : tString(), true } );
+                }
+        }
+        else
+        {
+            // a whole command typed: show what it is set to now
+            tConfItemBase * item = tConfItemBase::FindConfigItem( tString( word ) );
+            if ( item )
+            {
+                std::ostringstream value;
+                item->WriteVal( value );
+                tString text( item->GetTitle() );
+                text << " is now " << value.str();
+                last_.push_back( uSuggestion{ text, help( item ), false } );
+            }
+        }
+        suggestions = last_;
+    }
+private:
+    tString lastTyped_;
+    std::vector< uSuggestion > last_;
 };
 
 //! @param M         passed on to uMenuItemStringWithHistory
@@ -1007,6 +1081,7 @@ void do_con(){
     commands = tConfItemBase::GetCommands();
     gAutoCompleterConsole completer(commands);
     gMemuItemConsole s(&con_menu,c,&completer);
+    con_menu.SetConsoleClicks( true );
     con_menu.SetCenter(-.75);
     con_menu.SetBot(-2);
     con_menu.SetTop(-.7);
