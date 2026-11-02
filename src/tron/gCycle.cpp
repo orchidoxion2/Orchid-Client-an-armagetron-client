@@ -4473,142 +4473,9 @@ void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * 
     }
 }
 
-// CYCLE_GLOW: a soft light around every cycle, in its color; only changes how they look on your screen
+// CYCLE_GLOW: the cycles' own surface glows, at full brightness whatever the lighting; only on your screen
 bool sg_cycleGlow = true;
 static tConfItem<bool> sg_cycleGlowConf( "CYCLE_GLOW", sg_cycleGlow );
-
-#ifndef DEDICATED
-namespace
-{
-    // the glows are drawn after the whole arena, so trails drawn later can't paint over them
-    struct gGlow
-    {
-        gCycle const * cycle;
-        eCoord pos, dir;
-        REAL r, g, b;
-    };
-    std::vector< gGlow > sg_glows;
-
-    // a round spot of light, brightest in the middle
-    GLuint sg_glowTexture = 0;
-    void sg_ForgetGlowTexture()
-    {
-        if ( sg_glowTexture )
-            glDeleteTextures( 1, &sg_glowTexture );
-        sg_glowTexture = 0;
-    }
-    rCallbackBeforeScreenModeChange sg_forgetGlow( &sg_ForgetGlowTexture );
-
-    bool sg_SelectGlowTexture()
-    {
-        if ( !sg_glowTexture )
-        {
-            int const size = 64;
-            std::vector< unsigned char > pixels( size * size * 2 );
-            for ( int y = 0; y < size; ++y )
-                for ( int x = 0; x < size; ++x )
-                {
-                    REAL const dx = ( x + .5f ) / size * 2 - 1, dy = ( y + .5f ) / size * 2 - 1;
-                    REAL d = 1 - sqrt( dx * dx + dy * dy );
-                    d = d < 0 ? 0 : d;
-                    REAL const a = d * d * ( 3 - 2 * d );  // smooth falloff
-                    pixels[ ( y * size + x ) * 2 ] = 255;
-                    pixels[ ( y * size + x ) * 2 + 1 ] = static_cast< unsigned char >( a * 255 + .5f );
-                }
-            rDisplayList::Cancel();
-            glGenTextures( 1, &sg_glowTexture );
-            glBindTexture( GL_TEXTURE_2D, sg_glowTexture );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-            glTexImage2D( GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, size, size, 0, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, &pixels[0] );
-        }
-        glBindTexture( GL_TEXTURE_2D, sg_glowTexture );
-        return sg_glowTexture != 0;
-    }
-
-    void sg_QueueGlow( gCycle const * cycle, eCoord const & pos, eCoord const & dir, gRealColor const & color )
-    {
-        // a cycle drawn a second time means a new picture (or the floor mirror) started
-        for ( gGlow const & glow: sg_glows )
-            if ( glow.cycle == cycle )
-            {
-                sg_glows.clear();
-                break;
-            }
-        // the glow is never darker than a dim grey, so dark cycles still glow a little
-        REAL r = color.r_, g = color.g_, b = color.b_;
-        REAL const bright = std::max( r, std::max( g, b ) );
-        if ( bright < .5 )
-        {
-            REAL const lift = .5 - bright;
-            r += lift; g += lift; b += lift;
-        }
-        sg_glows.push_back( gGlow{ cycle, pos, dir, r, g, b } );
-    }
-
-    void sg_Quad( eCoord const & c, REAL z, REAL const * ax, REAL const * ay, REAL size )
-    {
-        TexCoord( 0, 0 ); glVertex3f( c.x - ( ax[0] + ay[0] ) * size, c.y - ( ax[1] + ay[1] ) * size, z - ( ax[2] + ay[2] ) * size );
-        TexCoord( 1, 0 ); glVertex3f( c.x + ( ax[0] - ay[0] ) * size, c.y + ( ax[1] - ay[1] ) * size, z + ( ax[2] - ay[2] ) * size );
-        TexCoord( 1, 1 ); glVertex3f( c.x + ( ax[0] + ay[0] ) * size, c.y + ( ax[1] + ay[1] ) * size, z + ( ax[2] + ay[2] ) * size );
-        TexCoord( 0, 1 ); glVertex3f( c.x - ( ax[0] - ay[0] ) * size, c.y - ( ax[1] - ay[1] ) * size, z - ( ax[2] - ay[2] ) * size );
-    }
-
-    void sg_RenderGlows()
-    {
-        if ( sg_glows.empty() )
-            return;
-        if ( !sg_cycleGlow )
-        {
-            sg_glows.clear();
-            return;
-        }
-
-        RenderEnd();
-        ModelMatrix();
-        // the camera's right and up directions, so the halo always faces the camera
-        GLfloat m[16];
-        glGetFloatv( GL_MODELVIEW_MATRIX, m );
-        REAL const right[3] = { m[0], m[4], m[8] }, up[3] = { m[1], m[5], m[9] };
-        REAL const floorX[3] = { 1, 0, 0 }, floorY[3] = { 0, 1, 0 };
-
-        glDisable( GL_LIGHTING );
-        glDisable( GL_CULL_FACE );
-        glEnable( GL_DEPTH_TEST );
-        glDepthMask( GL_FALSE );
-        glEnable( GL_BLEND );
-        glBlendFunc( GL_SRC_ALPHA, GL_ONE );  // adds light
-        glEnable( GL_TEXTURE_2D );
-        glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-
-        if ( sg_SelectGlowTexture() )
-        {
-            BeginQuads();
-            for ( gGlow const & glow: sg_glows )
-            {
-                // the middle of the cycle's body, a bit behind its position
-                eCoord const middle = glow.pos - glow.dir * .3f;
-                // a pool of light on the floor
-                glColor4f( glow.r, glow.g, glow.b, .45f );
-                sg_Quad( middle, .03f, floorX, floorY, 2.6f );
-                // a wide halo around the cycle
-                glColor4f( glow.r, glow.g, glow.b, .5f );
-                sg_Quad( middle, .45f, right, up, 1.7f );
-                // and a bright, almost white core
-                glColor4f( .6f + .4f * glow.r, .6f + .4f * glow.g, .6f + .4f * glow.b, .55f );
-                sg_Quad( middle, .4f, right, up, .8f );
-            }
-            RenderEnd();
-        }
-
-        glDepthMask( GL_TRUE );
-        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-        glDisable( GL_TEXTURE_2D );
-        glColor4f( 1, 1, 1, 1 );
-        sg_glows.clear();
-    }
-}
-#endif
 
 void gCycle::Render(const eCamera *cam){
     /*
@@ -4646,9 +4513,6 @@ void gCycle::Render(const eCamera *cam){
     if (!std::isfinite(z) || !std::isfinite(pos.x) ||!std::isfinite(pos.y)||!std::isfinite(dir.x)||!std::isfinite(dir.y)
             || !std::isfinite(skew))
         st_Breakpoint();
-    if ( Alive() && sg_cycleGlow && !blinking )
-        sg_QueueGlow( this, PredictPosition(), dir, color_ );
-
     if (Alive()){
         //con << "Drawing cycle at " << pos << '\n';
 
@@ -4731,6 +4595,15 @@ void gCycle::Render(const eCamera *cam){
         TexMatrix();
         IdentityMatrix();
 
+        // Cycle Glow: the surface lights itself; textured models in white (the texture has the color),
+        // the plain shapes in their cycle color
+        if ( sg_cycleGlow )
+        {
+            bool const textured = !( sg_cycleModel > 0 && sg_cycleModel < sg_cycleModelCount );
+            GLfloat const emission[4] = { textured ? 1 : color_.r_, textured ? 1 : color_.g_, textured ? 1 : color_.b_, 1 };
+            glMaterialfv( GL_FRONT_AND_BACK, GL_EMISSION, emission );
+        }
+
         if ( sg_cycleModel > 0 && sg_cycleModel < sg_cycleModelCount ){
             ModelMatrix();
             if ( !blinking )
@@ -4765,7 +4638,7 @@ void gCycle::Render(const eCamera *cam){
 
             ModelMatrix();
 
-            if ( !blinking )
+            auto drawClassic = [&]()
             {
                 bodyTex->Select();
                 body->Render();
@@ -4798,11 +4671,35 @@ void gCycle::Render(const eCamera *cam){
 
                 front->Render();
                 glPopMatrix();
+            };
+            if ( !blinking )
+            {
+                drawClassic();
+                if ( sg_cycleGlow )
+                {
+                    // and once more, adding light, so the texture shines brighter toward white
+                    glDisable( GL_LIGHTING );
+                    glEnable( GL_BLEND );
+                    glBlendFunc( GL_SRC_ALPHA, GL_ONE );
+                    glDepthMask( GL_FALSE );
+                    glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+                    glColor4f( 1, 1, 1, .8f );
+                    drawClassic();
+                    glDepthMask( GL_TRUE );
+                    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+                    glEnable( GL_LIGHTING );
+                }
             }
             
             glPopMatrix();
         }
 
+
+        if ( sg_cycleGlow )
+        {
+            GLfloat const none[4] = { 0, 0, 0, 1 };
+            glMaterialfv( GL_FRONT_AND_BACK, GL_EMISSION, none );
+        }
 
         //     TexMatrix();
         //     IdentityMatrix();
@@ -5238,7 +5135,6 @@ void gCycle::RenderName( const eCamera* cam ) {
 
 
 void gCycle::RenderCockpitVirtual(bool){
-    sg_RenderGlows();
     gCinematicLyrics::Render( this, pos, dir, color_ );
 }
 

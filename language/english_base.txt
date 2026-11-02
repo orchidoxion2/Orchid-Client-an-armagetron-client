@@ -2061,7 +2061,7 @@ customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Of
 
 customization_preview_text	Preview
 customization_cycle_glow_text	Cycle Glow
-customization_cycle_glow_help	A soft light around every cycle in its own color, with a glow on the floor under it. Only changes how cycles look on your screen.
+customization_cycle_glow_help	Makes the cycles themselves glow: their surface shines at full brightness in their color, without lighting up anything around them. Only changes how cycles look on your screen.
 customization_cycle_model_text	Cycle Model
 customization_cycle_model_help	The shape the cycles are drawn in. Only changes how they look on your screen.
 customization_cycle_model_preview_help	The chosen model at the end of its trail, seen from above, in your cycle color.
