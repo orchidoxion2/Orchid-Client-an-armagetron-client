@@ -2068,6 +2068,8 @@ customization_trail_style_0_text	Classic
 customization_trail_style_0_help	The normal Armagetron walls.
 customization_trail_style_1_text	Neon Tubes
 customization_trail_style_1_help	Low, solid, rounded tubes in the trail color with round corners, a lighter top and a soft shadow on the floor.
+customization_trail_height_text	Trail Height:
+customization_trail_height_help	How high the trails are, in arena units, for both trail styles. 0.5 is the usual. Only changes how they look on your screen; the trails block the same either way.
 customization_trail_thickness_text	Tube Thickness:
 customization_trail_thickness_help	How thick the neon tubes are. Only used with the Neon Tubes style.
 customization_trail_floor_glow_text	Floor Glow

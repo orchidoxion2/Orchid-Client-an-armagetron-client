@@ -4507,7 +4507,8 @@ namespace
         }
 
         REAL const width = ( sg_trailThickness < 1 ? 1 : ( sg_trailThickness > 10 ? 10 : sg_trailThickness ) ) * .1f;
-        REAL const height = width * 1.15f;
+        // as high as the Trail Height setting (CYCLE_TRAIL_HEIGHT), at least round
+        REAL const height = sg_cycleTrailHeight > width * .5f ? sg_cycleTrailHeight : width * .5f;
         gTubeProfile profile;
         profile.Make( width, height );
 

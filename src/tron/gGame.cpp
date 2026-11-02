@@ -3227,9 +3227,32 @@ void MainMenu(bool ingame){
                                          "$customization_name_gradient_help", firstPlayer->nameGradient );
     uMenuItemSubmenu nameGradient_sm( &customization, &nameGradient, "$customization_name_gradient_help" );
 
+    // Trail Height as a slider: CYCLE_TRAIL_HEIGHT in tenths of an arena unit
+    class gTrailHeightSlider: public uMenuItemSlider
+    {
+        static int & Tenths(){ static int tenths = 5; return tenths; }
+        // the slider works on whole tenths; pick up changes made elsewhere (the Preferences menu, the console)
+        void Read(){ Tenths() = int( sg_cycleTrailHeight * 10 + .5f ); }
+        void Write(){ sg_cycleTrailHeight = Tenths() * .1f; }
+    public:
+        explicit gTrailHeightSlider( uMenu * menu )
+        : uMenuItemSlider( menu, "$customization_trail_height_text", "$customization_trail_height_help", Tenths(), 1, 30, 1 ){}
+        REAL GetPanelFraction() override { Read(); return uMenuItemSlider::GetPanelFraction(); }
+        void SetPanelFraction( REAL f ) override { Read(); uMenuItemSlider::SetPanelFraction( f ); Write(); }
+        void LeftRight( int dir ) override { Read(); uMenuItemSlider::LeftRight( dir ); Write(); }
+        tString GetPanelValue() override
+        {
+            Read();
+            char buffer[16];
+            snprintf( buffer, sizeof( buffer ), "%.1f", Tenths() * .1f );
+            return tString( buffer );
+        }
+    };
+
     // Customization > Trails (items are listed bottom to top)
     uMenu trails("$customization_trails_text");
     uMenuItemToggle trailFloorGlow( &trails, "$customization_trail_floor_glow_text", "$customization_trail_floor_glow_help", sg_trailFloorGlow );
+    gTrailHeightSlider trailHeightSlider( &trails );
     uMenuItemSlider trailThickness( &trails, "$customization_trail_thickness_text", "$customization_trail_thickness_help", sg_trailThickness, 1, 10, 1 );
     uMenuItemSelection<int> trailStyle( &trails, "$customization_trail_style_text", "$customization_trail_style_help", sg_trailStyle );
     trailStyle.NewChoice( "$customization_trail_style_0_text", "$customization_trail_style_0_help", 0 );
