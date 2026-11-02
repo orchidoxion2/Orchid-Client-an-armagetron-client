@@ -4450,13 +4450,209 @@ void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * 
     RenderEnd();
 }
 
+// Customization > Trails: how the trails look; only on your screen
+int sg_trailStyle = 0;          // TRAIL_STYLE: 0 classic walls, 1 neon tubes
+static tConfItem< int > sg_trailStyleConf( "TRAIL_STYLE", sg_trailStyle );
+int sg_trailThickness = 4;      // TRAIL_THICKNESS: tube width in tenths of an arena unit
+static tConfItem< int > sg_trailThicknessConf( "TRAIL_THICKNESS", sg_trailThickness );
+bool sg_trailFloorGlow = true;  // TRAIL_FLOOR_GLOW: soft light on the floor along the tubes
+static tConfItem< bool > sg_trailFloorGlowConf( "TRAIL_FLOOR_GLOW", sg_trailFloorGlow );
+
+#ifndef DEDICATED
+namespace
+{
+    // the tube's cross section: straight sides, then a half circle on top; x sideways, z up, as unit normals too
+    struct gTubeProfile
+    {
+        REAL x[16], z[16], nx[16], nz[16];
+        int n = 0;
+        void Make( REAL width, REAL height )
+        {
+            REAL const radius = width * .5f, top = height - radius > 0 ? height - radius : 0;
+            n = 0;
+            x[n] = radius; z[n] = 0; nx[n] = 1; nz[n] = 0; ++n;
+            int const steps = 10;
+            for ( int i = 0; i <= steps; ++i )
+            {
+                REAL const a = M_PI * i / steps;
+                x[n] = cos( a ) * radius; z[n] = top + sin( a ) * radius;
+                nx[n] = cos( a ); nz[n] = sin( a ); ++n;
+            }
+            x[n] = -radius; z[n] = 0; nx[n] = -1; nz[n] = 0; ++n;
+        }
+    };
+
+    // neon look: the color all over, darker low on the sides, a light stripe along the top
+    void sg_TubeColor( REAL r, REAL g, REAL b, REAL nx, REAL ny, REAL nz )
+    {
+        REAL light = .2f * nx + .15f * ny + .97f * nz;
+        light = light > 0 ? light : 0;
+        REAL const shade = .28f + .72f * light * light;
+        REAL const shine = nz > .75f ? ( nz - .75f ) / .25f * .6f : 0;
+        glColor4f( r * shade + ( 1 - r * shade ) * shine, g * shade + ( 1 - g * shade ) * shine, b * shade + ( 1 - b * shade ) * shine, 1 );
+    }
+
+    void sg_RenderTrailTubes( gRealColor const & color, std::vector< std::pair< eCoord, eCoord > > const & segments )
+    {
+        if ( segments.empty() )
+            return;
+
+        // the trail color, bright enough to glow
+        REAL r = color.r_, g = color.g_, b = color.b_;
+        REAL const bright = std::max( r, std::max( g, b ) );
+        if ( bright > 0 && bright < 1 )
+        {
+            REAL const boost = 1 / bright;
+            r *= boost; g *= boost; b *= boost;
+        }
+        else if ( bright <= 0 )
+            r = g = b = .5f;
+
+        REAL const width = ( sg_trailThickness < 1 ? 1 : ( sg_trailThickness > 10 ? 10 : sg_trailThickness ) ) * .1f;
+        REAL const height = width * 1.15f;
+        gTubeProfile profile;
+        profile.Make( width, height );
+
+        RenderEnd();
+        glDisable( GL_TEXTURE_2D );
+        glDisable( GL_LIGHTING );
+        glDisable( GL_CULL_FACE );
+        glShadeModel( GL_SMOOTH );
+
+        // soft light on the floor next to the tubes, drawn first, behind everything
+        if ( sg_trailFloorGlow )
+        {
+            REAL const glowWidth = width * 3.5f;
+            glEnable( GL_BLEND );
+            glBlendFunc( GL_SRC_ALPHA, GL_ONE );
+            glDepthMask( GL_FALSE );
+            REAL const z = .01f;
+            for ( auto const & seg: segments )
+            {
+                eCoord d = seg.second - seg.first;
+                REAL const len = sqrt( d.NormSquared() );
+                if ( len < EPS )
+                    continue;
+                d = d * ( 1 / len );
+                eCoord const side( -d.y * glowWidth, d.x * glowWidth );
+                BeginQuads();
+                for ( int s = -1; s <= 1; s += 2 )
+                {
+                    glColor4f( r, g, b, .22f ); glVertex3f( seg.first.x, seg.first.y, z ); glVertex3f( seg.second.x, seg.second.y, z );
+                    glColor4f( r, g, b, 0 ); glVertex3f( seg.second.x + side.x * s, seg.second.y + side.y * s, z ); glVertex3f( seg.first.x + side.x * s, seg.first.y + side.y * s, z );
+                }
+                RenderEnd();
+            }
+            // and round glows at the corners, so they have no gaps
+            for ( auto const & seg: segments )
+                for ( eCoord const & c: { seg.first, seg.second } )
+                {
+                    BeginTriangleFan();
+                    glColor4f( r, g, b, .22f ); glVertex3f( c.x, c.y, z );
+                    glColor4f( r, g, b, 0 );
+                    for ( int k = 0; k <= 16; ++k )
+                    {
+                        REAL const a = 2 * M_PI * k / 16;
+                        glVertex3f( c.x + cos( a ) * glowWidth, c.y + sin( a ) * glowWidth, z );
+                    }
+                    RenderEnd();
+                }
+            glDepthMask( GL_TRUE );
+            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+        }
+
+        // the tubes
+        for ( auto const & seg: segments )
+        {
+            eCoord d = seg.second - seg.first;
+            REAL const len = sqrt( d.NormSquared() );
+            if ( len < EPS )
+                continue;
+            d = d * ( 1 / len );
+            eCoord const left( -d.y, d.x );
+            BeginQuadStrip();
+            for ( int k = 0; k < profile.n; ++k )
+            {
+                REAL const nx = left.x * profile.nx[k], ny = left.y * profile.nx[k];
+                sg_TubeColor( r, g, b, nx, ny, profile.nz[k] );
+                glVertex3f( seg.first.x + left.x * profile.x[k], seg.first.y + left.y * profile.x[k], profile.z[k] );
+                glVertex3f( seg.second.x + left.x * profile.x[k], seg.second.y + left.y * profile.x[k], profile.z[k] );
+            }
+            RenderEnd();
+        }
+
+        // round posts at both ends of every piece: rounded corners and ends
+        int const around = 14;
+        for ( auto const & seg: segments )
+            for ( eCoord const & c: { seg.first, seg.second } )
+            {
+                for ( int k = 0; k + 1 < profile.n - 1; ++k )
+                {
+                    // the right half of the profile, turned around the corner point
+                    if ( profile.x[k] < -EPS || profile.x[k+1] < -EPS )
+                        continue;
+                    BeginQuadStrip();
+                    for ( int j = 0; j <= around; ++j )
+                    {
+                        REAL const a = 2 * M_PI * j / around, ca = cos( a ), sa = sin( a );
+                        for ( int q = k; q <= k + 1; ++q )
+                        {
+                            sg_TubeColor( r, g, b, ca * profile.nx[q], sa * profile.nx[q], profile.nz[q] );
+                            glVertex3f( c.x + ca * profile.x[q], c.y + sa * profile.x[q], profile.z[q] );
+                        }
+                    }
+                    RenderEnd();
+                }
+            }
+
+        glColor4f( 1, 1, 1, 1 );
+    }
+}
+#endif
+
 void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * cycle )
 {
-    // render everything you can with a display list
-    RenderAllWithDisplayList( camera, cycle );
+#ifndef DEDICATED
+    if ( sg_trailStyle == 1 )
+    {
+        // neon tubes instead of the classic walls
+        std::vector< std::pair< eCoord, eCoord > > segments;
+        for ( gNetPlayerWall * list: { wallsWithDisplayList_, wallList_ } )
+            for ( gNetPlayerWall * run = list; run; run = run->Next() )
+                if ( run->BegPos() + EPS < run->EndPos() )
+                    run->BlockingSegments( segments );
+        // the trail starts behind the cycle, not inside it
+        if ( cycle->Alive() )
+        {
+            eCoord const front = cycle->Position();
+            for ( auto & seg: segments )
+                for ( int e = 0; e < 2; ++e )
+                {
+                    eCoord & end = e ? seg.second : seg.first;
+                    eCoord const & other = e ? seg.first : seg.second;
+                    if ( ( end - front ).NormSquared() < .25f )
+                    {
+                        eCoord const back = other - end;
+                        REAL const len = sqrt( back.NormSquared() );
+                        REAL const cut = len > 1.1f ? 1.1f : len;
+                        if ( len > EPS )
+                            end = end + back * ( cut / len );
+                    }
+                }
+        }
+        sg_RenderTrailTubes( cycle->trailColor_, segments );
+        if ( rTextureGroups::TextureMode[rTextureGroups::TEX_WALL] != 0 )
+            glEnable( GL_TEXTURE_2D );
+    }
+    else
+#endif
+    {
+        // render everything you can with a display list
+        RenderAllWithDisplayList( camera, cycle );
 
-    // then, render the rest
-    RenderAll( camera, cycle, wallList_ );
+        // then, render the rest
+        RenderAll( camera, cycle, wallList_ );
+    }
 
     if ( sg_cycleTrailAgeLine )
     {

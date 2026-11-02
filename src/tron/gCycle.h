@@ -64,7 +64,10 @@ extern REAL sg_cycleInvulnerableTime;
 
 //! CYCLE_MODEL: 0 the normal cycle, 1 needle, 2 pin, 3 blade
 extern int sg_cycleModel;
-extern bool sg_cycleGlow;  //!< CYCLE_GLOW: a soft light around every cycle
+extern bool sg_cycleGlow;  //!< CYCLE_GLOW: the cycles' own surface glows
+extern int sg_trailStyle;       //!< TRAIL_STYLE: 0 classic walls, 1 neon tubes
+extern int sg_trailThickness;   //!< TRAIL_THICKNESS: neon tube width in tenths of an arena unit
+extern bool sg_trailFloorGlow;  //!< TRAIL_FLOOR_GLOW: soft light on the floor along the neon tubes
 int const sg_cycleModelCount = 4;
 
 //! outline of a cycle model seen from above (x forward, y left, counterclockwise, starting at the nose),
@@ -176,6 +179,7 @@ class gCycle: public gCycleMovement
     friend class gNetPlayerWall;
     friend class gDestination;
     friend class gCycleWallRenderer;
+    friend class gCycleWallsDisplayListManager;
 
     eSoundPlayer *engine; //!< engine sound
 

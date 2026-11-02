@@ -3227,6 +3227,15 @@ void MainMenu(bool ingame){
                                          "$customization_name_gradient_help", firstPlayer->nameGradient );
     uMenuItemSubmenu nameGradient_sm( &customization, &nameGradient, "$customization_name_gradient_help" );
 
+    // Customization > Trails (items are listed bottom to top)
+    uMenu trails("$customization_trails_text");
+    uMenuItemToggle trailFloorGlow( &trails, "$customization_trail_floor_glow_text", "$customization_trail_floor_glow_help", sg_trailFloorGlow );
+    uMenuItemSlider trailThickness( &trails, "$customization_trail_thickness_text", "$customization_trail_thickness_help", sg_trailThickness, 1, 10, 1 );
+    uMenuItemSelection<int> trailStyle( &trails, "$customization_trail_style_text", "$customization_trail_style_help", sg_trailStyle );
+    trailStyle.NewChoice( "$customization_trail_style_0_text", "$customization_trail_style_0_help", 0 );
+    trailStyle.NewChoice( "$customization_trail_style_1_text", "$customization_trail_style_1_help", 1 );
+    uMenuItemSubmenu trails_sm( &customization, &trails, "$customization_trails_help" );
+
     uMenuItemToggle cycleGlow( &customization, "$customization_cycle_glow_text", "$customization_cycle_glow_help", sg_cycleGlow );
 
     uMenu cycleModel("$customization_cycle_model_text");

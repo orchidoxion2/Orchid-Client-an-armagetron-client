@@ -2060,6 +2060,18 @@ customization_custom_hud_text	Custom HUD:
 customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Off: the HUD that comes with the game. Your own HUD is kept either way.
 
 customization_preview_text	Preview
+customization_trails_text	Trails
+customization_trails_help	How the cycle trails look. Only changes how they look on your screen.
+customization_trail_style_text	Trail Style:
+customization_trail_style_help	The look of the trails.
+customization_trail_style_0_text	Classic
+customization_trail_style_0_help	The normal Armagetron walls.
+customization_trail_style_1_text	Neon Tubes
+customization_trail_style_1_help	Low, rounded neon tubes with round corners, a light stripe on top and a soft glow on the floor.
+customization_trail_thickness_text	Tube Thickness:
+customization_trail_thickness_help	How thick the neon tubes are. Only used with the Neon Tubes style.
+customization_trail_floor_glow_text	Floor Glow
+customization_trail_floor_glow_help	A soft light on the floor along the neon tubes. Only used with the Neon Tubes style.
 customization_cycle_glow_text	Cycle Glow
 customization_cycle_glow_help	Makes the cycles themselves glow: their surface shines at full brightness in their color, without lighting up anything around them. Only changes how cycles look on your screen.
 customization_cycle_model_text	Cycle Model
