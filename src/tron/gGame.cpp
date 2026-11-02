@@ -3227,6 +3227,8 @@ void MainMenu(bool ingame){
                                          "$customization_name_gradient_help", firstPlayer->nameGradient );
     uMenuItemSubmenu nameGradient_sm( &customization, &nameGradient, "$customization_name_gradient_help" );
 
+    uMenuItemToggle cycleGlow( &customization, "$customization_cycle_glow_text", "$customization_cycle_glow_help", sg_cycleGlow );
+
     uMenu cycleModel("$customization_cycle_model_text");
     gCycleModelPreview cycleModelPreview( &cycleModel );
     uMenuItemSelection<int> cycleModelChoice( &cycleModel, "$customization_cycle_model_text", "$customization_cycle_model_help", sg_cycleModel );

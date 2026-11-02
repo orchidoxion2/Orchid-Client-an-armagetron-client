@@ -64,6 +64,7 @@ extern REAL sg_cycleInvulnerableTime;
 
 //! CYCLE_MODEL: 0 the normal cycle, 1 needle, 2 pin, 3 blade
 extern int sg_cycleModel;
+extern bool sg_cycleGlow;  //!< CYCLE_GLOW: a soft light around every cycle
 int const sg_cycleModelCount = 4;
 
 //! outline of a cycle model seen from above (x forward, y left, counterclockwise, starting at the nose),
