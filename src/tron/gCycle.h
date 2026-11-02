@@ -67,6 +67,7 @@ extern int sg_cycleModel;
 extern bool sg_cycleGlow;  //!< CYCLE_GLOW: the cycles' own surface glows
 extern int sg_trailStyle;       //!< TRAIL_STYLE: 0 classic walls, 1 neon tubes
 extern int sg_trailThickness;   //!< TRAIL_THICKNESS: neon tube width in tenths of an arena unit
+extern bool sg_trailRoundCorners;  //!< TRAIL_ROUND_CORNERS: neon tubes bend in smooth curves at corners
 extern bool sg_trailFloorGlow;  //!< TRAIL_FLOOR_GLOW: soft light on the floor along the neon tubes
 int const sg_cycleModelCount = 4;
 

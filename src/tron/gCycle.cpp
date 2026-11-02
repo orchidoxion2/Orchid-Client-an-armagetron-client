@@ -70,6 +70,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define DONTDOIT
 #include "rRender.h"
 #include "rDisplayList.h"
+#include <map>
 #endif
 
 // TODO: get rid of this
@@ -4456,6 +4457,8 @@ static tConfItem< int > sg_trailStyleConf( "TRAIL_STYLE", sg_trailStyle );
 int sg_trailThickness = 4;      // TRAIL_THICKNESS: tube width in tenths of an arena unit
 static tConfItem< int > sg_trailThicknessConf( "TRAIL_THICKNESS", sg_trailThickness );
 bool sg_trailFloorGlow = false; // TRAIL_FLOOR_GLOW: soft light on the floor along the tubes
+bool sg_trailRoundCorners = true; // TRAIL_ROUND_CORNERS: the tubes bend in smooth curves at corners
+static tConfItem< bool > sg_trailRoundCornersConf( "TRAIL_ROUND_CORNERS", sg_trailRoundCorners );
 static tConfItem< bool > sg_trailFloorGlowConf( "TRAIL_FLOOR_GLOW", sg_trailFloorGlow );
 
 #ifndef DEDICATED
@@ -4644,53 +4647,170 @@ namespace
             glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
         }
 
-        // the tubes
-        for ( auto const & seg: segments )
-        {
-            eCoord d = seg.second - seg.first;
-            REAL const len = sqrt( d.NormSquared() );
-            if ( len < EPS )
-                continue;
-            d = d * ( 1 / len );
-            eCoord const left( -d.y, d.x );
-            BeginQuadStrip();
-            for ( int k = 0; k < profile.n; ++k )
-            {
-                REAL const nx = left.x * profile.nx[k], ny = left.y * profile.nx[k];
-                REAL const ax = seg.first.x + left.x * profile.x[k], ay = seg.first.y + left.y * profile.x[k];
-                REAL const bx = seg.second.x + left.x * profile.x[k], by = seg.second.y + left.y * profile.x[k];
-                sg_TubeColor( r, g, b, nx, ny, profile.nz[k], ax, ay, profile.z[k], light );
-                glVertex3f( ax, ay, profile.z[k] );
-                sg_TubeColor( r, g, b, nx, ny, profile.nz[k], bx, by, profile.z[k], light );
-                glVertex3f( bx, by, profile.z[k] );
-            }
-            RenderEnd();
-        }
-
-        // round posts at both ends of every piece: rounded corners and ends
+        // a round post standing on point c: rounded ends (and, without rounded corners, round corner joints)
         int const around = 20;
-        for ( auto const & seg: segments )
-            for ( eCoord const & c: { seg.first, seg.second } )
+        auto drawPost = [&]( eCoord const & c )
+        {
+            for ( int k = 0; k + 1 < profile.n - 1; ++k )
             {
-                for ( int k = 0; k + 1 < profile.n - 1; ++k )
+                // the right half of the profile, turned around the point
+                if ( profile.x[k] < -EPS || profile.x[k+1] < -EPS )
+                    continue;
+                BeginQuadStrip();
+                for ( int j = 0; j <= around; ++j )
                 {
-                    // the right half of the profile, turned around the corner point
-                    if ( profile.x[k] < -EPS || profile.x[k+1] < -EPS )
-                        continue;
-                    BeginQuadStrip();
-                    for ( int j = 0; j <= around; ++j )
+                    REAL const a = 2 * M_PI * j / around, ca = cos( a ), sa = sin( a );
+                    for ( int q = k; q <= k + 1; ++q )
                     {
-                        REAL const a = 2 * M_PI * j / around, ca = cos( a ), sa = sin( a );
-                        for ( int q = k; q <= k + 1; ++q )
-                        {
-                            REAL const px = c.x + ca * profile.x[q], py = c.y + sa * profile.x[q];
-                            sg_TubeColor( r, g, b, ca * profile.nx[q], sa * profile.nx[q], profile.nz[q], px, py, profile.z[q], light );
-                            glVertex3f( px, py, profile.z[q] );
-                        }
+                        REAL const px = c.x + ca * profile.x[q], py = c.y + sa * profile.x[q];
+                        sg_TubeColor( r, g, b, ca * profile.nx[q], sa * profile.nx[q], profile.nz[q], px, py, profile.z[q], light );
+                        glVertex3f( px, py, profile.z[q] );
                     }
-                    RenderEnd();
+                }
+                RenderEnd();
+            }
+        };
+
+        // the tube swept along a path of points, turning smoothly where the path bends
+        auto drawPath = [&]( std::vector< eCoord > const & path )
+        {
+            int const n = int( path.size() );
+            if ( n < 2 )
+                return;
+            // sideways direction at every point: the average of the pieces meeting there
+            std::vector< eCoord > left( n );
+            for ( int i = 0; i < n; ++i )
+            {
+                eCoord t = path[ i + 1 < n ? i + 1 : i ] - path[ i > 0 ? i - 1 : i ];
+                REAL const l = sqrt( t.NormSquared() );
+                t = l > EPS ? t * ( 1 / l ) : eCoord( 1, 0 );
+                left[i] = eCoord( -t.y, t.x );
+            }
+            for ( int i = 0; i + 1 < n; ++i )
+            {
+                BeginQuadStrip();
+                for ( int k = 0; k < profile.n; ++k )
+                    for ( int e = i; e <= i + 1; ++e )
+                    {
+                        REAL const px = path[e].x + left[e].x * profile.x[k], py = path[e].y + left[e].y * profile.x[k];
+                        sg_TubeColor( r, g, b, left[e].x * profile.nx[k], left[e].y * profile.nx[k], profile.nz[k], px, py, profile.z[k], light );
+                        glVertex3f( px, py, profile.z[k] );
+                    }
+                RenderEnd();
+            }
+        };
+
+        if ( sg_trailRoundCorners )
+        {
+            // join the pieces into lines, through the points they share
+            auto key = []( eCoord const & p ){ return std::make_pair( long( floor( p.x * 20 + .5f ) ), long( floor( p.y * 20 + .5f ) ) ); };
+            std::map< std::pair< long, long >, std::vector< int > > at;
+            int const count = int( segments.size() );
+            for ( int i = 0; i < count; ++i )
+            {
+                at[ key( segments[i].first ) ].push_back( i );
+                at[ key( segments[i].second ) ].push_back( i );
+            }
+            std::vector< bool > used( count, false );
+            auto walk = [&]( int start, eCoord from )
+            {
+                std::vector< eCoord > line( 1, from );
+                int current = start;
+                while ( current >= 0 && !used[ current ] )
+                {
+                    used[ current ] = true;
+                    auto const & seg = segments[ current ];
+                    eCoord const next = key( seg.first ) == key( from ) ? seg.second : seg.first;
+                    line.push_back( next );
+                    from = next;
+                    current = -1;
+                    auto const & there = at[ key( next ) ];
+                    if ( there.size() == 2 )  // exactly one other piece continues here
+                        for ( int other: there )
+                            if ( !used[ other ] )
+                                current = other;
+                }
+                return line;
+            };
+            std::vector< std::vector< eCoord > > lines;
+            // open lines first, from their ends; then closed loops
+            for ( int pass = 0; pass < 2; ++pass )
+                for ( int i = 0; i < count; ++i )
+                    if ( !used[i] )
+                    {
+                        auto const & a1 = at[ key( segments[i].first ) ];
+                        auto const & a2 = at[ key( segments[i].second ) ];
+                        if ( pass == 0 && a1.size() != 2 )
+                            lines.push_back( walk( i, segments[i].first ) );
+                        else if ( pass == 0 && a2.size() != 2 )
+                            lines.push_back( walk( i, segments[i].second ) );
+                        else if ( pass == 1 )
+                            lines.push_back( walk( i, segments[i].first ) );
+                    }
+
+            REAL const radius = width * 2.2f;
+            for ( auto & line: lines )
+            {
+                // drop repeated points and points in the middle of straight runs
+                std::vector< eCoord > corners;
+                for ( eCoord const & p: line )
+                {
+                    if ( !corners.empty() && ( p - corners.back() ).NormSquared() < 1E-6f )
+                        continue;
+                    if ( corners.size() >= 2 )
+                    {
+                        eCoord const a = corners[ corners.size() - 1 ] - corners[ corners.size() - 2 ], b = p - corners.back();
+                        if ( fabs( a.x * b.y - a.y * b.x ) < 1E-4f * sqrt( a.NormSquared() * b.NormSquared() ) && a.x * b.x + a.y * b.y > 0 )
+                            corners.pop_back();
+                    }
+                    corners.push_back( p );
+                }
+                if ( corners.size() < 2 )
+                    continue;
+
+                // replace every corner with a smooth bend
+                std::vector< eCoord > path( 1, corners.front() );
+                for ( size_t i = 1; i + 1 < corners.size(); ++i )
+                {
+                    eCoord const p = corners[i];
+                    eCoord a = p - corners[i-1], b = corners[i+1] - p;
+                    REAL const la = sqrt( a.NormSquared() ), lb = sqrt( b.NormSquared() );
+                    REAL const rr = std::min( radius, std::min( la, lb ) * .45f );
+                    if ( rr < EPS )
+                    {
+                        path.push_back( p );
+                        continue;
+                    }
+                    a = a * ( 1 / la ); b = b * ( 1 / lb );
+                    eCoord const in = p - a * rr, out = p + b * rr;
+                    int const steps = 10;
+                    for ( int k = 0; k <= steps; ++k )
+                    {
+                        REAL const t = REAL( k ) / steps, u = 1 - t;
+                        path.push_back( in * ( u * u ) + p * ( 2 * u * t ) + out * ( t * t ) );
+                    }
+                }
+                path.push_back( corners.back() );
+                drawPath( path );
+                // round ends where the line stops
+                if ( ( corners.front() - corners.back() ).NormSquared() > 1E-4f )
+                {
+                    drawPost( corners.front() );
+                    drawPost( corners.back() );
                 }
             }
+        }
+        else
+        {
+            // straight pieces with round posts at every corner
+            for ( auto const & seg: segments )
+                drawPath( std::vector< eCoord >{ seg.first, seg.second } );
+            for ( auto const & seg: segments )
+            {
+                drawPost( seg.first );
+                drawPost( seg.second );
+            }
+        }
 
         glColor4f( 1, 1, 1, 1 );
     }

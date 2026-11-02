@@ -2081,6 +2081,8 @@ customization_trail_height_text	Trail Height:
 customization_trail_height_help	How high the trails are, in arena units, for both trail styles. 0.5 is the usual. Only changes how they look on your screen; the trails block the same either way.
 customization_trail_thickness_text	Tube Thickness:
 customization_trail_thickness_help	How thick the neon tubes are. Only used with the Neon Tubes style.
+customization_trail_round_corners_text	Rounded Corners
+customization_trail_round_corners_help	The tubes bend in a smooth curve at every corner, like a bent pipe, instead of turning sharply. Only used with the Neon Tubes style.
 customization_trail_floor_glow_text	Floor Glow
 customization_trail_floor_glow_help	Adds a soft light on the floor along the tubes, for an extra neon look. Off by default. Only used with the Neon Tubes style.
 customization_cycle_glow_text	Cycle Glow

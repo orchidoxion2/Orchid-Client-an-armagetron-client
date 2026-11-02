@@ -3262,6 +3262,7 @@ void MainMenu(bool ingame){
     // Customization > Trails (items are listed bottom to top)
     uMenu trails("$customization_trails_text");
     uMenuItemToggle trailFloorGlow( &trails, "$customization_trail_floor_glow_text", "$customization_trail_floor_glow_help", sg_trailFloorGlow );
+    uMenuItemToggle trailRoundCorners( &trails, "$customization_trail_round_corners_text", "$customization_trail_round_corners_help", sg_trailRoundCorners );
     gTrailHeightSlider trailHeightSlider( &trails );
     uMenuItemSlider trailThickness( &trails, "$customization_trail_thickness_text", "$customization_trail_thickness_help", sg_trailThickness, 1, 10, 1 );
     uMenuItemSelection<int> trailStyle( &trails, "$customization_trail_style_text", "$customization_trail_style_help", sg_trailStyle );
