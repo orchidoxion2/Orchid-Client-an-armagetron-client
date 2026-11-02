@@ -4455,7 +4455,7 @@ int sg_trailStyle = 0;          // TRAIL_STYLE: 0 classic walls, 1 neon tubes
 static tConfItem< int > sg_trailStyleConf( "TRAIL_STYLE", sg_trailStyle );
 int sg_trailThickness = 4;      // TRAIL_THICKNESS: tube width in tenths of an arena unit
 static tConfItem< int > sg_trailThicknessConf( "TRAIL_THICKNESS", sg_trailThickness );
-bool sg_trailFloorGlow = true;  // TRAIL_FLOOR_GLOW: soft light on the floor along the tubes
+bool sg_trailFloorGlow = false; // TRAIL_FLOOR_GLOW: soft light on the floor along the tubes
 static tConfItem< bool > sg_trailFloorGlowConf( "TRAIL_FLOOR_GLOW", sg_trailFloorGlow );
 
 #ifndef DEDICATED
@@ -4487,8 +4487,8 @@ namespace
     {
         REAL light = .2f * nx + .15f * ny + .97f * nz;
         light = light > 0 ? light : 0;
-        REAL const shade = .28f + .72f * light * light;
-        REAL const shine = nz > .75f ? ( nz - .75f ) / .25f * .6f : 0;
+        REAL const shade = .3f + .75f * light * light;
+        REAL const shine = nz > .8f ? ( nz - .8f ) / .2f * .25f : 0;
         glColor4f( r * shade + ( 1 - r * shade ) * shine, g * shade + ( 1 - g * shade ) * shine, b * shade + ( 1 - b * shade ) * shine, 1 );
     }
 
@@ -4497,16 +4497,14 @@ namespace
         if ( segments.empty() )
             return;
 
-        // the trail color, bright enough to glow
+        // the trail's own color; only very dark ones are lifted, so they stay visible on the dark floor
         REAL r = color.r_, g = color.g_, b = color.b_;
         REAL const bright = std::max( r, std::max( g, b ) );
-        if ( bright > 0 && bright < 1 )
+        if ( bright < .45f )
         {
-            REAL const boost = 1 / bright;
-            r *= boost; g *= boost; b *= boost;
+            REAL const lift = .45f - bright;
+            r += lift; g += lift; b += lift;
         }
-        else if ( bright <= 0 )
-            r = g = b = .5f;
 
         REAL const width = ( sg_trailThickness < 1 ? 1 : ( sg_trailThickness > 10 ? 10 : sg_trailThickness ) ) * .1f;
         REAL const height = width * 1.15f;
@@ -4518,6 +4516,46 @@ namespace
         glDisable( GL_LIGHTING );
         glDisable( GL_CULL_FACE );
         glShadeModel( GL_SMOOTH );
+
+        // a soft shadow under the tubes, the same low-ridge trick as the glow below, so overlaps don't darken twice
+        {
+            REAL const shadowWidth = width * 1.6f;
+            REAL const zTop = .03f, zEdge = .004f;
+            glEnable( GL_BLEND );
+            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+            glDepthMask( GL_TRUE );
+            glDepthFunc( GL_LESS );
+            for ( auto const & seg: segments )
+            {
+                eCoord d = seg.second - seg.first;
+                REAL const len = sqrt( d.NormSquared() );
+                if ( len < EPS )
+                    continue;
+                d = d * ( 1 / len );
+                eCoord const side( -d.y * shadowWidth, d.x * shadowWidth );
+                BeginQuads();
+                for ( int s = -1; s <= 1; s += 2 )
+                {
+                    glColor4f( 0, 0, 0, .45f ); glVertex3f( seg.first.x, seg.first.y, zTop ); glVertex3f( seg.second.x, seg.second.y, zTop );
+                    glColor4f( 0, 0, 0, 0 ); glVertex3f( seg.second.x + side.x * s, seg.second.y + side.y * s, zEdge ); glVertex3f( seg.first.x + side.x * s, seg.first.y + side.y * s, zEdge );
+                }
+                RenderEnd();
+            }
+            for ( auto const & seg: segments )
+                for ( eCoord const & c: { seg.first, seg.second } )
+                {
+                    BeginTriangleFan();
+                    glColor4f( 0, 0, 0, .45f ); glVertex3f( c.x, c.y, zTop );
+                    glColor4f( 0, 0, 0, 0 );
+                    for ( int k = 0; k <= 16; ++k )
+                    {
+                        REAL const a = 2 * M_PI * k / 16;
+                        glVertex3f( c.x + cos( a ) * shadowWidth, c.y + sin( a ) * shadowWidth, zEdge );
+                    }
+                    RenderEnd();
+                }
+            glDepthFunc( GL_LEQUAL );
+        }
 
         // soft light on the floor next to the tubes. It is shaped like a very low ridge, highest on the
         // trail; with depth writing on, only the top surface counts where glows overlap (corners, joints,

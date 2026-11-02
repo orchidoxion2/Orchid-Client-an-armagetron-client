@@ -2067,11 +2067,11 @@ customization_trail_style_help	The look of the trails.
 customization_trail_style_0_text	Classic
 customization_trail_style_0_help	The normal Armagetron walls.
 customization_trail_style_1_text	Neon Tubes
-customization_trail_style_1_help	Low, rounded neon tubes with round corners, a light stripe on top and a soft glow on the floor.
+customization_trail_style_1_help	Low, solid, rounded tubes in the trail color with round corners, a lighter top and a soft shadow on the floor.
 customization_trail_thickness_text	Tube Thickness:
 customization_trail_thickness_help	How thick the neon tubes are. Only used with the Neon Tubes style.
 customization_trail_floor_glow_text	Floor Glow
-customization_trail_floor_glow_help	A soft light on the floor along the neon tubes. Only used with the Neon Tubes style.
+customization_trail_floor_glow_help	Adds a soft light on the floor along the tubes, for an extra neon look. Off by default. Only used with the Neon Tubes style.
 customization_cycle_glow_text	Cycle Glow
 customization_cycle_glow_help	Makes the cycles themselves glow: their surface shines at full brightness in their color, without lighting up anything around them. Only changes how cycles look on your screen.
 customization_cycle_model_text	Cycle Model
