@@ -4519,14 +4519,19 @@ namespace
         glDisable( GL_CULL_FACE );
         glShadeModel( GL_SMOOTH );
 
-        // soft light on the floor next to the tubes, drawn first, behind everything
+        // soft light on the floor next to the tubes. It is shaped like a very low ridge, highest on the
+        // trail; with depth writing on, only the top surface counts where glows overlap (corners, joints,
+        // trails close together), so overlaps show the strongest glow instead of adding up into blotches.
         if ( sg_trailFloorGlow )
         {
             REAL const glowWidth = width * 3.5f;
+            REAL const zTop = .045f, zEdge = .006f;
+            // dark colors get a stronger glow, so it is visible at all
+            REAL const glowAlpha = .3f + .2f * ( 1 - ( r * .3f + g * .59f + b * .11f ) );
             glEnable( GL_BLEND );
             glBlendFunc( GL_SRC_ALPHA, GL_ONE );
-            glDepthMask( GL_FALSE );
-            REAL const z = .01f;
+            glDepthMask( GL_TRUE );
+            glDepthFunc( GL_LESS );
             for ( auto const & seg: segments )
             {
                 eCoord d = seg.second - seg.first;
@@ -4538,26 +4543,26 @@ namespace
                 BeginQuads();
                 for ( int s = -1; s <= 1; s += 2 )
                 {
-                    glColor4f( r, g, b, .22f ); glVertex3f( seg.first.x, seg.first.y, z ); glVertex3f( seg.second.x, seg.second.y, z );
-                    glColor4f( r, g, b, 0 ); glVertex3f( seg.second.x + side.x * s, seg.second.y + side.y * s, z ); glVertex3f( seg.first.x + side.x * s, seg.first.y + side.y * s, z );
+                    glColor4f( r, g, b, glowAlpha ); glVertex3f( seg.first.x, seg.first.y, zTop ); glVertex3f( seg.second.x, seg.second.y, zTop );
+                    glColor4f( r, g, b, 0 ); glVertex3f( seg.second.x + side.x * s, seg.second.y + side.y * s, zEdge ); glVertex3f( seg.first.x + side.x * s, seg.first.y + side.y * s, zEdge );
                 }
                 RenderEnd();
             }
-            // and round glows at the corners, so they have no gaps
+            // low cones at the corners and ends, so the glow goes round them
             for ( auto const & seg: segments )
                 for ( eCoord const & c: { seg.first, seg.second } )
                 {
                     BeginTriangleFan();
-                    glColor4f( r, g, b, .22f ); glVertex3f( c.x, c.y, z );
+                    glColor4f( r, g, b, glowAlpha ); glVertex3f( c.x, c.y, zTop );
                     glColor4f( r, g, b, 0 );
-                    for ( int k = 0; k <= 16; ++k )
+                    for ( int k = 0; k <= 20; ++k )
                     {
-                        REAL const a = 2 * M_PI * k / 16;
-                        glVertex3f( c.x + cos( a ) * glowWidth, c.y + sin( a ) * glowWidth, z );
+                        REAL const a = 2 * M_PI * k / 20;
+                        glVertex3f( c.x + cos( a ) * glowWidth, c.y + sin( a ) * glowWidth, zEdge );
                     }
                     RenderEnd();
                 }
-            glDepthMask( GL_TRUE );
+            glDepthFunc( GL_LEQUAL );
             glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
         }
 
