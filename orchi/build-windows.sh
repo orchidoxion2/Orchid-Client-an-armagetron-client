@@ -124,7 +124,19 @@ for s in $(cat "$WIN/sources.txt"); do
     o="$OBJ/$(echo "$s" | tr / _).o"
     OBJECTS="$OBJECTS $o"
     case "$s" in *.c) compiler="$CC -O2 -w $DEFINES $INCLUDES";; *) compiler="$CXX $CXXFLAGS";; esac
-    test "$o" -nt "$src" || echo "$compiler -c $src -o $o" >> "$WIN/compile.txt"
+    # recompile when the source or any header it includes changed; the compiler lists
+    # the headers in $o.d (-MMD). Without this, a changed header leaves objects built
+    # against the old class layouts, which crashes the game.
+    stale=
+    if ! test -f "$o" || ! test -f "$o.d" || ! test "$o" -nt "$src"; then
+        stale=1
+    else
+        for dep in $(sed -e 's/^[^:]*://' -e 's/\\$//' "$o.d"); do
+            case "$dep" in *:) continue;; esac
+            if ! test -e "$dep" || test "$dep" -nt "$o"; then stale=1; break; fi
+        done
+    fi
+    test -z "$stale" || echo "$compiler -MMD -MF $o.d -c $src -o $o" >> "$WIN/compile.txt"
 done
 echo "compiling $(wc -l < "$WIN/compile.txt") files"
 xargs -P"$JOBS" -I{} sh -c {} < "$WIN/compile.txt"
