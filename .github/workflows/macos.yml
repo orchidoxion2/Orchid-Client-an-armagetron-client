@@ -42,13 +42,21 @@ jobs:
           key: protobuf-3.21.12-${{ matrix.runner }}
 
       - name: Build the app
-        run: orchi/build-macos.sh
+        run: |
+          mkdir -p build
+          orchi/build-macos.sh 2>&1 | tee build/build-macos.log
 
       - name: Show the build logs
         if: failure()
         run: |
-          for f in build/mac/build/configure.log build/mac/build/config.log build/mac/build/make.log build/mac/dylibbundler.log; do
-            test -f "$f" && { echo "===== $f"; tail -100 "$f"; }
+          for f in build/build-macos.log build/mac/protobuf-src/protobuf-3.21.12/make.log build/mac/build/configure.log build/mac/build/config.log build/mac/build/make.log build/mac/dylibbundler.log; do
+            test -f "$f" || continue
+            echo "===== $f"; tail -100 "$f"
+            # also as an annotation, so the error shows up on the commit's checks
+            msg="$(grep -iE -B2 -A3 'error|not found|failed' "$f" | tail -60)"
+            test -n "$msg" || msg="$(tail -40 "$f")"
+            msg="${msg//'%'/'%25'}"; msg="${msg//$'\r'/}"; msg="${msg//$'\n'/'%0A'}"
+            echo "::error title=$(basename "$f")::${msg:0:20000}"
           done
           true
 
