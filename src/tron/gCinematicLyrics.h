@@ -4,6 +4,14 @@
 
 Orchid Client -- cinematic lyrics for Armagetron Advanced.
 
+Code provided by Orchid Client
+https://github.com/orchidoxion2/Orchid-Client-an-armagetron-client
+Copyright (C) 2026 Orchid Client
+
+If you copy or adapt this code, keep this notice (the GPL below requires
+that), and please also credit "code provided by Orchid Client" where your
+project shows its credits.
+
 **************************************************************************
 
 This program is free software; you can redistribute it and/or

@@ -2089,7 +2089,7 @@ settings_experimental_text	Experimental
 settings_experimental_help	Features that are still being tried out.
 
 settings_spotify_text		Spotify
-settings_spotify_help		Shows the song playing on your Spotify account, with its lyrics, in the top right corner of the HUD.
+settings_spotify_help		Shows the song playing on your Spotify account, with its lyrics, in the top right corner of the HUD. Code provided by Orchid Client.
 spotify_enabled_text		Spotify Integration:
 spotify_enabled_help		Show the song playing on your Spotify account in the top right corner of the HUD while you play.
 spotify_lyrics_text		Show Lyrics:
@@ -2657,7 +2657,7 @@ pref_trail_age_help		This is an experimental feature, using this feature in rank
 cinematic_lyrics_text	Cinematic Lyrics:
 cinematic_lyrics_help	Shows the Spotify lyrics in the arena as big 3D words in front of your cycle, one word at a time, glowing in your cycle color. Turns off the lyrics in the HUD while it is on.
 cinematic_lyrics_menu_text	Cinematic Lyrics
-cinematic_lyrics_menu_help	Spotify lyrics as big 3D words in the arena: turn them on, and choose where they sit, how far away, the font and the color.
+cinematic_lyrics_menu_help	Spotify lyrics as big 3D words in the arena: turn them on, and choose where they sit, how far away, the font and the color. Code provided by Orchid Client.
 cinematic_lyrics_distance_text	Distance:
 cinematic_lyrics_distance_help	How far in front of your cycle the lyrics appear, in arena units. Smaller is closer. Drag the slider or use left/right.
 cinematic_lyrics_turn_speed_text	Turn Speed:
