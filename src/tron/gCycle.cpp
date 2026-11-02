@@ -4464,14 +4464,14 @@ namespace
     // the tube's cross section: straight sides, then a half circle on top; x sideways, z up, as unit normals too
     struct gTubeProfile
     {
-        REAL x[16], z[16], nx[16], nz[16];
+        REAL x[24], z[24], nx[24], nz[24];
         int n = 0;
         void Make( REAL width, REAL height )
         {
             REAL const radius = width * .5f, top = height - radius > 0 ? height - radius : 0;
             n = 0;
             x[n] = radius; z[n] = 0; nx[n] = 1; nz[n] = 0; ++n;
-            int const steps = 10;
+            int const steps = 16;
             for ( int i = 0; i <= steps; ++i )
             {
                 REAL const a = M_PI * i / steps;
@@ -4482,14 +4482,51 @@ namespace
         }
     };
 
-    // neon look: the color all over, darker low on the sides, a light stripe along the top
-    void sg_TubeColor( REAL r, REAL g, REAL b, REAL nx, REAL ny, REAL nz )
+    // glossy look: soft light from above, darker low on the sides, and a sharp shine where the light
+    // from above reflects toward the camera (Blinn-Phong), so it moves along the tube with the view
+    struct gTubeLight
     {
-        REAL light = .2f * nx + .15f * ny + .97f * nz;
-        light = light > 0 ? light : 0;
-        REAL const shade = .3f + .75f * light * light;
-        REAL const shine = nz > .8f ? ( nz - .8f ) / .2f * .25f : 0;
-        glColor4f( r * shade + ( 1 - r * shade ) * shine, g * shade + ( 1 - g * shade ) * shine, b * shade + ( 1 - b * shade ) * shine, 1 );
+        REAL eye[3];
+        void FromModelView()
+        {
+            GLfloat m[16];
+            glGetFloatv( GL_MODELVIEW_MATRIX, m );
+            // camera position: minus the translation, turned back by the rotation
+            eye[0] = -( m[0] * m[12] + m[1] * m[13] + m[2] * m[14] );
+            eye[1] = -( m[4] * m[12] + m[5] * m[13] + m[6] * m[14] );
+            eye[2] = -( m[8] * m[12] + m[9] * m[13] + m[10] * m[14] );
+        }
+    };
+
+    void sg_TubeColor( REAL r, REAL g, REAL b, REAL nx, REAL ny, REAL nz, REAL px, REAL py, REAL pz, gTubeLight const & light )
+    {
+        // diffuse: light from above, a little from the side, wrapped so the sides don't go black
+        REAL const ld[3] = { -.25f, .2f, .95f };
+        REAL diffuse = ( nx * ld[0] + ny * ld[1] + nz * ld[2] ) * .6f + .4f;
+        diffuse = diffuse < 0 ? 0 : diffuse;
+        REAL const shade = .22f + .78f * diffuse * diffuse;
+
+        // specular: half way between the light and the camera
+        REAL vx = light.eye[0] - px, vy = light.eye[1] - py, vz = light.eye[2] - pz;
+        REAL const vl = sqrt( vx * vx + vy * vy + vz * vz );
+        REAL spec = 0;
+        if ( vl > 1E-4f )
+        {
+            vx /= vl; vy /= vl; vz /= vl;
+            REAL hx = ld[0] + vx, hy = ld[1] + vy, hz = ld[2] + vz;
+            REAL const hl = sqrt( hx * hx + hy * hy + hz * hz );
+            if ( hl > 1E-4f )
+            {
+                REAL const nh = ( nx * hx + ny * hy + nz * hz ) / hl;
+                if ( nh > 0 )
+                {
+                    REAL const nh2 = nh * nh, nh4 = nh2 * nh2, nh8 = nh4 * nh4, nh16 = nh8 * nh8;
+                    spec = nh16 * nh16 * .75f + nh8 * .12f;  // a sharp shine on a softer sheen
+                }
+            }
+        }
+        REAL const cr = r * shade, cg = g * shade, cb = b * shade;
+        glColor4f( cr + ( 1 - cr ) * spec, cg + ( 1 - cg ) * spec, cb + ( 1 - cb ) * spec, 1 );
     }
 
     void sg_RenderTrailTubes( gRealColor const & color, std::vector< std::pair< eCoord, eCoord > > const & segments )
@@ -4511,6 +4548,8 @@ namespace
         REAL const height = sg_cycleTrailHeight > width * .5f ? sg_cycleTrailHeight : width * .5f;
         gTubeProfile profile;
         profile.Make( width, height );
+        gTubeLight light;
+        light.FromModelView();
 
         RenderEnd();
         glDisable( GL_TEXTURE_2D );
@@ -4618,15 +4657,18 @@ namespace
             for ( int k = 0; k < profile.n; ++k )
             {
                 REAL const nx = left.x * profile.nx[k], ny = left.y * profile.nx[k];
-                sg_TubeColor( r, g, b, nx, ny, profile.nz[k] );
-                glVertex3f( seg.first.x + left.x * profile.x[k], seg.first.y + left.y * profile.x[k], profile.z[k] );
-                glVertex3f( seg.second.x + left.x * profile.x[k], seg.second.y + left.y * profile.x[k], profile.z[k] );
+                REAL const ax = seg.first.x + left.x * profile.x[k], ay = seg.first.y + left.y * profile.x[k];
+                REAL const bx = seg.second.x + left.x * profile.x[k], by = seg.second.y + left.y * profile.x[k];
+                sg_TubeColor( r, g, b, nx, ny, profile.nz[k], ax, ay, profile.z[k], light );
+                glVertex3f( ax, ay, profile.z[k] );
+                sg_TubeColor( r, g, b, nx, ny, profile.nz[k], bx, by, profile.z[k], light );
+                glVertex3f( bx, by, profile.z[k] );
             }
             RenderEnd();
         }
 
         // round posts at both ends of every piece: rounded corners and ends
-        int const around = 14;
+        int const around = 20;
         for ( auto const & seg: segments )
             for ( eCoord const & c: { seg.first, seg.second } )
             {
@@ -4641,8 +4683,9 @@ namespace
                         REAL const a = 2 * M_PI * j / around, ca = cos( a ), sa = sin( a );
                         for ( int q = k; q <= k + 1; ++q )
                         {
-                            sg_TubeColor( r, g, b, ca * profile.nx[q], sa * profile.nx[q], profile.nz[q] );
-                            glVertex3f( c.x + ca * profile.x[q], c.y + sa * profile.x[q], profile.z[q] );
+                            REAL const px = c.x + ca * profile.x[q], py = c.y + sa * profile.x[q];
+                            sg_TubeColor( r, g, b, ca * profile.nx[q], sa * profile.nx[q], profile.nz[q], px, py, profile.z[q], light );
+                            glVertex3f( px, py, profile.z[q] );
                         }
                     }
                     RenderEnd();
