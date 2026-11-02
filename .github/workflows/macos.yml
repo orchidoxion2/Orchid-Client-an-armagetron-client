@@ -1,0 +1,64 @@
+# Builds Orchid Client for macOS on GitHub's Mac machines, once for Apple Silicon and once for Intel Macs.
+# The apps show up as downloads ("artifacts") on the run's page in the Actions tab.
+# When a release is published, the two zips are also added to that release.
+name: macOS build
+
+on:
+  push:
+    branches: [source]
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14        # Apple Silicon (M1 and newer)
+            arch: arm64
+          - runner: macos-15-intel  # Intel Macs
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the tags, for the version number
+
+      - name: Install build tools and libraries
+        run: |
+          brew update > /dev/null
+          brew install autoconf automake libtool pkg-config boost sdl2 sdl2_image sdl2_mixer \
+            libxml2 freetype ftgl libpng glew dylibbundler
+
+      - name: Cache protobuf
+        uses: actions/cache@v4
+        with:
+          path: build/mac/protobuf
+          key: protobuf-3.21.12-${{ matrix.runner }}
+
+      - name: Build the app
+        run: orchi/build-macos.sh
+
+      - name: Show the build logs
+        if: failure()
+        run: |
+          for f in build/mac/build/configure.log build/mac/build/config.log build/mac/build/make.log build/mac/dylibbundler.log; do
+            test -f "$f" && { echo "===== $f"; tail -100 "$f"; }
+          done
+          true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orchid-client-macos-${{ matrix.arch }}
+          path: build/mac/orchid-client-macos-${{ matrix.arch }}.zip
+
+      - name: Add to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" build/mac/orchid-client-macos-${{ matrix.arch }}.zip --clobber

@@ -49,13 +49,15 @@ def icon():
     for size in (16, 32, 48, 64, 128):
         out = os.path.join(ROOT, "desktop", "icons", f"{size}x{size}", "armagetronad.png")
         rgba.resize((size, size), Image.LANCZOS).save(out)
+    # the macOS app icon; the source is small, so stop at 256 pixels
+    rgba.resize((256, 256), Image.LANCZOS).save(os.path.join(ART, "orchid.icns"), sizes=[(16, 16), (32, 32), (64, 64), (128, 128), (256, 256)])
 
 
 def main():
     title()
     icon()
     menu_background()
-    print("wrote textures/title.jpg, textures/icon.png, textures/menu/background.jpg and desktop/icons/*/armagetronad.png")
+    print("wrote textures/title.jpg, textures/icon.png, textures/menu/background.jpg and desktop/icons/*/armagetronad.png and orchi/art/orchid.icns")
 
 
 if __name__ == "__main__":

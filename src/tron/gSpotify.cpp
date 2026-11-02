@@ -71,7 +71,12 @@ static int const sp_sendFlags = 0;
 typedef int sp_Socket;
 static sp_Socket const sp_noSocket = -1;
 static void sp_CloseSocket( sp_Socket s ){ close( s ); }
+#ifdef MSG_NOSIGNAL
 static int const sp_sendFlags = MSG_NOSIGNAL;
+#else
+// macOS has no MSG_NOSIGNAL; the accepted socket gets SO_NOSIGPIPE instead
+static int const sp_sendFlags = 0;
+#endif
 #ifdef LIBCURL_PROTOCOL_HTTP
 #include <curl/curl.h>
 #endif
@@ -880,6 +885,13 @@ static bool sp_AcceptLogin( sp_Socket listener, std::string const & state, std::
     if ( select( int( listener + 1 ), &set, NULL, NULL, &timeout ) <= 0 )
         return false;
     sp_Socket client = accept( listener, NULL, NULL );
+#if !defined( WIN32 ) && !defined( MSG_NOSIGNAL ) && defined( SO_NOSIGPIPE )
+    if ( client != sp_noSocket )
+    {
+        int one = 1;
+        setsockopt( client, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof( one ) );
+    }
+#endif
     if ( client == sp_noSocket )
         return false;
 
