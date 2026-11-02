@@ -6,6 +6,7 @@ name: macOS build
 on:
   push:
     branches: [source]
+    tags: ['v*']   # a version tag: the zips are added to the release with that name, if there is one
   workflow_dispatch:
   release:
     types: [published]
@@ -66,7 +67,13 @@ jobs:
           path: build/mac/orchid-client-macos-${{ matrix.arch }}.zip
 
       - name: Add to the release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" build/mac/orchid-client-macos-${{ matrix.arch }}.zip --clobber
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" build/mac/orchid-client-macos-${{ matrix.arch }}.zip --clobber
+          else
+            echo "no release named $TAG yet; the zip is in this run's artifacts"
+          fi
