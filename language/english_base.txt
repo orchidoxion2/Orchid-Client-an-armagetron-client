@@ -2060,6 +2060,15 @@ customization_custom_hud_text	Custom HUD:
 customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Off: the HUD that comes with the game. Your own HUD is kept either way.
 
 customization_preview_text	Preview
+customization_floor_text	Floor
+customization_floor_help	How the arena floor looks. Only changes how it looks on your screen.
+customization_floor_style_text	Floor Style:
+customization_floor_style_help	The look of the floor.
+customization_floor_style_0_text	Classic
+customization_floor_style_0_help	The normal floor with its grid (as set in Display Settings > Detail Settings).
+customization_floor_style_1_text	Plain
+customization_floor_style_1_help	A smooth floor in one color, without a grid; the background behind the arena gets the same color, so there is no horizon.
+customization_floor_color_help	The color of the Plain floor, 0 to 255. Dark blue-grey (15, 19, 23) is the usual.
 customization_trails_text	Trails
 customization_trails_help	How the cycle trails look. Only changes how they look on your screen.
 customization_trail_style_text	Trail Style:

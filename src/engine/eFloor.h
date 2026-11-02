@@ -55,4 +55,9 @@ bool se_BlackSky();
 void se_FloorColor(REAL& r, REAL& g, REAL &b);
 
 void se_MakeColorValid(REAL& r, REAL & g, REAL& b, REAL f);
+//! FLOOR_STYLE: 0 the classic floor, 1 a plain floor in one color
+extern int se_floorStyle;
+//! FLOOR_PLAIN_RED/GREEN/BLUE: the color of the plain floor, 0 to 255
+extern int se_floorPlainRed, se_floorPlainGreen, se_floorPlainBlue;
+
 #endif

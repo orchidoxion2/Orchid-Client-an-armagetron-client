@@ -46,6 +46,7 @@ static tSettingItem<REAL> f_m("FLOOR_MIRROR_INT",sr_floorMirror_strength);
 #include "eCamera.h"
 #include "eSensor.h"
 #include "rScreen.h"
+#include "rSysdep.h"
 #include "rRender.h"
 #include "eWall.h"
 #include "eAdvWall.h"
@@ -173,6 +174,45 @@ static void finite_xy_plane( const eCoord &pos,const eCoord &dir,REAL h, eRectan
     TexVertex(hx, ly, h);
     TexVertex(lx, ly, h);
     RenderEnd();
+}
+
+// FLOOR_STYLE: 0 the classic floor (as set in Detail Settings), 1 a plain floor in one color
+int se_floorStyle = 0;
+static tConfItem< int > se_floorStyleConf( "FLOOR_STYLE", se_floorStyle );
+// FLOOR_PLAIN_RED/GREEN/BLUE: the color of the plain floor, 0 to 255
+int se_floorPlainRed = 15, se_floorPlainGreen = 19, se_floorPlainBlue = 23;
+static tConfItem< int > se_floorPlainRedConf( "FLOOR_PLAIN_RED", se_floorPlainRed );
+static tConfItem< int > se_floorPlainGreenConf( "FLOOR_PLAIN_GREEN", se_floorPlainGreen );
+static tConfItem< int > se_floorPlainBlueConf( "FLOOR_PLAIN_BLUE", se_floorPlainBlue );
+
+// with the plain floor: the arena rim as a low row of white dashes instead of the tall rim wall
+static void se_RenderDashedRim()
+{
+    REAL const dash = 14, gap = 7, height = .7f;
+    RenderEnd();
+    glDisable( GL_TEXTURE_2D );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_CULL_FACE );
+    glEnable( GL_DEPTH_TEST );
+    BeginQuads();
+    for ( int i = se_rimWalls.Len() - 1; i >= 0; --i )
+    {
+        eCoord const a = se_rimWalls( i )->EndPoint( 0 ), b = se_rimWalls( i )->EndPoint( 1 );
+        REAL const len = sqrt( ( b - a ).NormSquared() );
+        if ( len < .01 )
+            continue;
+        eCoord const d = ( b - a ) * ( 1 / len );
+        for ( REAL t = gap * .5f; t < len; t += dash + gap )
+        {
+            REAL const t2 = t + dash < len ? t + dash : len;
+            eCoord const p = a + d * t, q = a + d * t2;
+            // darker at the bottom, almost white at the top
+            glColor4f( .45f, .45f, .5f, 1 ); glVertex3f( p.x, p.y, 0 ); glVertex3f( q.x, q.y, 0 );
+            glColor4f( .92f, .92f, .96f, 1 ); glVertex3f( q.x, q.y, height ); glVertex3f( p.x, p.y, height );
+        }
+    }
+    RenderEnd();
+    glEnable( GL_CULL_FACE );
 }
 
 static void infinity_xy_plane(eCoord const & pos, const eCoord &dir,REAL h=0){
@@ -430,6 +470,25 @@ void eGrid::display_simple( eCamera* cam, int viewer,bool floor,
         su_FetchAndStoreSDLInput();
         int floorDetail = sr_floorDetail;
 
+        // FLOOR_STYLE 1: a smooth floor in one color, the same color behind the arena, no grid
+        if ( se_floorStyle == 1 )
+        {
+            float const color[3] = { se_floorPlainRed / 255.0f, se_floorPlainGreen / 255.0f, se_floorPlainBlue / 255.0f };
+            for ( int c = 0; c < 3; ++c )
+                sr_clearColor[c] = color[c];
+            glDisable( GL_TEXTURE_2D );
+            glDisable( GL_BLEND );
+            glColor4f( color[0], color[1], color[2], 1 );
+            infinity_xy_plane( cam->CameraPos(), cam->CameraDir() );
+            glEnable( GL_BLEND );
+            floorDetail = rFLOOR_OFF;
+        }
+        else
+        {
+            for ( int c = 0; c < 3; ++c )
+                sr_clearColor[c] = 0;
+        }
+
         // no multitexturing without alpha blending
         if ( !sr_alphaBlend && floorDetail > rFLOOR_TEXTURE )
             floorDetail = rFLOOR_TEXTURE;
@@ -545,7 +604,10 @@ void eGrid::display_simple( eCamera* cam, int viewer,bool floor,
         {
             su_FetchAndStoreSDLInput();
     
-            eWallRim::RenderAll( cam );
+            if ( se_floorStyle == 1 )
+                se_RenderDashedRim();
+            else
+                eWallRim::RenderAll( cam );
         }
 
         if (sr_lowerSky && sr_highRim){

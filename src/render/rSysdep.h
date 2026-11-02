@@ -83,4 +83,7 @@ public:
 extern tString sr_screenshotName;
 extern int sr_maxFPS;
 
+//! the color the screen is cleared to before each frame
+extern float sr_clearColor[3];
+
 #endif

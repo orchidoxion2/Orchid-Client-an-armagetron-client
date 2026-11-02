@@ -1588,11 +1588,14 @@ void sr_UnlockSDL(){
     //std::cerr << " unlocked!\n";
 }
 
+// the color the screen is cleared to before drawing, black unless the floor style wants another
+float sr_clearColor[3] = { 0, 0, 0 };
+
 #ifndef DEDICATED
 void  rSysDep::ClearGL(){
     if (sr_glOut && sr_needClear )
     {
-        glClearColor(0.0,0.0,0.0,1.0);
+        glClearColor(sr_clearColor[0],sr_clearColor[1],sr_clearColor[2],1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
     sr_needClear = true;

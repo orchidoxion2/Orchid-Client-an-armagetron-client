@@ -3249,6 +3249,16 @@ void MainMenu(bool ingame){
         }
     };
 
+    // Customization > Floor (items are listed bottom to top)
+    uMenu floorMenu("$customization_floor_text");
+    uMenuItemSlider floorBlue( &floorMenu, "$customization_own_cycle_b_text", "$customization_floor_color_help", se_floorPlainBlue, 0, 255, 1 );
+    uMenuItemSlider floorGreen( &floorMenu, "$customization_own_cycle_g_text", "$customization_floor_color_help", se_floorPlainGreen, 0, 255, 1 );
+    uMenuItemSlider floorRed( &floorMenu, "$customization_own_cycle_r_text", "$customization_floor_color_help", se_floorPlainRed, 0, 255, 1 );
+    uMenuItemSelection<int> floorStyle( &floorMenu, "$customization_floor_style_text", "$customization_floor_style_help", se_floorStyle );
+    floorStyle.NewChoice( "$customization_floor_style_0_text", "$customization_floor_style_0_help", 0 );
+    floorStyle.NewChoice( "$customization_floor_style_1_text", "$customization_floor_style_1_help", 1 );
+    uMenuItemSubmenu floor_sm( &customization, &floorMenu, "$customization_floor_help" );
+
     // Customization > Trails (items are listed bottom to top)
     uMenu trails("$customization_trails_text");
     uMenuItemToggle trailFloorGlow( &trails, "$customization_trail_floor_glow_text", "$customization_trail_floor_glow_help", sg_trailFloorGlow );
