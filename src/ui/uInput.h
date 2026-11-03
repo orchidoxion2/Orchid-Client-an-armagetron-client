@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "rSDL.h"
 #include "tString.h"
+#include <vector>
 #include "defs.h"
 #include "tLinkedList.h"
 #include "tConfiguration.h"
@@ -261,6 +262,10 @@ private:
     tJUST_CONTROLLED_PTR< uBind > bound_; //!< the binding
     float pressed_;                       //!< analogue flag indicating whether the key/button was pressed
 };
+
+//! all inputs (keys, mouse buttons, joystick), by ID; entries can be NULL
+typedef std::vector< uInput * > uInputs;
+extern uInputs su_inputs;
 
 // *****************
 // Player binds

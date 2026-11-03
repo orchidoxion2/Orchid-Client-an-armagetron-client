@@ -102,6 +102,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "gCinematicLyrics.h"
 #include "eFloor.h"
 #include "cockpit/cLeaderboard.h"
+#include "cockpit/cKeyOverlay.h"
 #include "gCockpitEditor.h"
 gArena Arena;
 
@@ -3194,6 +3195,8 @@ void MainMenu(bool ingame){
     uMenuItemToggle chatBackground( &chatLook, "$customization_chat_background_text", "$customization_chat_background_help", sr_chatBackground );
     uMenuItemSubmenu chatLook_sm( &customization, &chatLook, "$customization_chat_help" );
 
+    uMenuItemToggle keyOverlay( &customization, "$customization_key_overlay_text",
+                                "$customization_key_overlay_help", sg_hudKeyOverlay );
     uMenuItemToggle leaderboard( &customization, "$customization_leaderboard_text",
                                  "$customization_leaderboard_help", sg_hudLeaderboard );
 

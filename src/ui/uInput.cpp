@@ -105,7 +105,6 @@ uAction * uAction::Find( char const * name )
 // uInput
 // ****************************************
 
-typedef std::vector< uInput * > uInputs;
 uInputs su_inputs;
 std::map< std::string, uInput * > su_inputMap; // map from persistent ID to input
 

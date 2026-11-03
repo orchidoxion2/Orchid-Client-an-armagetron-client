@@ -18,7 +18,7 @@
     usetemplate CDATA ''
 ">
 
-<!ELEMENT Cockpit ((BarGauge | NeedleGauge | Map | Label | VerticalBarGauge | Rectangle | Spotify | Leaderboard | WidgetTemplate | Camview )+)>
+<!ELEMENT Cockpit ((BarGauge | NeedleGauge | Map | Label | VerticalBarGauge | Rectangle | Spotify | Leaderboard | KeyOverlay | WidgetTemplate | Camview )+)>
 <!ATTLIST Cockpit version CDATA #REQUIRED
                   coordinates (square | screen) "square">
 
@@ -80,6 +80,8 @@
 
 <!ELEMENT Leaderboard ((Position | Size)*)>
 <!ATTLIST Leaderboard %CommonWidgetAttributes;>
+<!ELEMENT KeyOverlay ((Position | Size)*)>
+<!ATTLIST KeyOverlay %CommonWidgetAttributes;>
 
 <!ELEMENT NeedleGauge ((DataSet |
                   Position |

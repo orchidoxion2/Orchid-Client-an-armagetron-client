@@ -113,6 +113,7 @@ PYEOF
 echo "src/tron/gSpotify.cpp" >> "$WIN/sources.txt"
 echo "src/tron/cockpit/cSpotify.cpp" >> "$WIN/sources.txt"
 echo "src/tron/cockpit/cLeaderboard.cpp" >> "$WIN/sources.txt"
+echo "src/tron/cockpit/cKeyOverlay.cpp" >> "$WIN/sources.txt"
 echo "src/tron/gCockpitEditor.cpp" >> "$WIN/sources.txt"
 echo "src/tron/gCinematicLyrics.cpp" >> "$WIN/sources.txt"
 

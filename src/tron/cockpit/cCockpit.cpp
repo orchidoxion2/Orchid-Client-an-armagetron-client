@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "cockpit/cRectangle.h"
 #include "cockpit/cSpotify.h"
 #include "cockpit/cLeaderboard.h"
+#include "cockpit/cKeyOverlay.h"
 #include "nConfig.h"
 
 #ifndef DEDICATED
@@ -628,6 +629,8 @@ cWidget::Base_ptr cCockpit::ProcessWidgetType(node cur) {
         return cWidget::Base_ptr(new cWidget::Spotify());
     if(cur.IsOfType("Leaderboard"))
         return cWidget::Base_ptr(new cWidget::Leaderboard());
+    if(cur.IsOfType("KeyOverlay"))
+        return cWidget::Base_ptr(new cWidget::KeyOverlay());
     return cWidget::Base_ptr();
 }
 

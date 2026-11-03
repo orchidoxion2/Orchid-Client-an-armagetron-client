@@ -2033,6 +2033,8 @@ customization_name_gradient_preview_help	How your name looks with the gradient.
 name_gradient_help			Color the player name with a gradient
 name_gradient_colors_help		The gradient colors for the player name: six hex digits each, separated by spaces
 
+customization_key_overlay_text	Key Overlay
+customization_key_overlay_help	Shows the keys you turn with at the bottom left of the HUD: one box for every key bound to turning left, then one for every key bound to turning right. A box lights up while its key is pressed, and each press rises above it as a bar. Move or resize it in the HUD editor.
 customization_leaderboard_text	HUD Leaderboard:
 customization_leaderboard_help	Shows all players sorted by score on the left side of the HUD while you play. Your own row is highlighted, players whose cycle is dead are dimmed.
 

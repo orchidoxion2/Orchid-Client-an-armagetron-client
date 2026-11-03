@@ -171,6 +171,8 @@ ce_Box ce_BoxOf( ce_Widget const & w )
         return ce_Box{ w.x, w.y - w.h * 3.8f, w.x + w.w, w.y };
     if ( w.type == "Leaderboard" )
         return ce_Box{ w.x, w.y - w.h * 9.2f, w.x + w.w, w.y };
+    if ( w.type == "KeyOverlay" )
+        return ce_Box{ w.x, w.y, w.x + w.w, w.y + w.h * 5.2f };
     return ce_Box{ w.x - w.w, w.y - w.h, w.x + w.w, w.y + w.h };
 }
 
@@ -254,6 +256,8 @@ public:
                 w.label = "Camera view";
             else if ( w.type == "Spotify" || w.type == "Leaderboard" )
                 w.label = w.type;
+            else if ( w.type == "KeyOverlay" )
+                w.label = "Key overlay";
             else if ( !sources.empty() )
             {
                 for ( size_t s = 0; s < sources.size(); ++s )
@@ -417,7 +421,7 @@ ce_Color ce_TypeColor( tString const & type )
         return ce_Color{ .6, .6, .65, 1 };
     if ( type == "Map" || type == "Camview" )
         return ce_Color{ .4, .9, .5, 1 };
-    if ( type == "Spotify" || type == "Leaderboard" )
+    if ( type == "Spotify" || type == "Leaderboard" || type == "KeyOverlay" )
         return ce_Color{ .84, .25, .62, 1 };
     return ce_Color{ 1, .75, .3, 1 };
 }
