@@ -959,10 +959,14 @@ int main(int argc,char **argv){
                         GLenum err = glewInit();
                         if (GLEW_OK != err)
                         {
-                            // Problem: glewInit failed, something is seriously wrong
-                            throw tGenericException( (const char *)glewGetErrorString(err), "GLEW Error" );
+                            // GLEW only provides optional extras (the fence extensions for frame pacing). It fails
+                            // when the OpenGL context does not come from GLX, which is the case on Wayland
+                            // desktops (e.g. CachyOS with KDE Plasma): "Unknown error". The game works without it.
+                            con << "Warning: GLEW could not start (" << (const char *)glewGetErrorString(err)
+                                << "), continuing without the OpenGL extension loader.\n";
                         }
-                        con << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << "\n";
+                        else
+                            con << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << "\n";
                     }
 #endif // HAVE_GLEW
 
