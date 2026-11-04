@@ -69,6 +69,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef DEDICATED
 #define DONTDOIT
 #include "rRender.h"
+#include <string>
+#include <set>
+#include <functional>
+#include <array>
 #include "rDisplayList.h"
 #include <map>
 #endif
@@ -4464,7 +4468,12 @@ static tConfItem< bool > sg_trailFloorGlowConf( "TRAIL_FLOOR_GLOW", sg_trailFloo
 #ifndef DEDICATED
 namespace
 {
-    // the tube's cross section: straight sides, then a half circle on top; x sideways, z up, as unit normals too
+    // The neon tubes are built from pieces (a straight tube, a bend, a round end post). Every piece is
+    // turned into triangles once and kept; a frame only builds the pieces that are new or changed (the
+    // end of the trail next to the cycle) and draws all of them in one go with vertex arrays. The
+    // shading is done by OpenGL lighting, so the stored triangles do not depend on the camera.
+
+    // the tube's cross section: straight sides, then a half circle on top; x sideways, z up, with normals
     struct gTubeProfile
     {
         REAL x[24], z[24], nx[24], nz[24];
@@ -4474,7 +4483,7 @@ namespace
             REAL const radius = width * .5f, top = height - radius > 0 ? height - radius : 0;
             n = 0;
             x[n] = radius; z[n] = 0; nx[n] = 1; nz[n] = 0; ++n;
-            int const steps = 16;
+            int const steps = 8;
             for ( int i = 0; i <= steps; ++i )
             {
                 REAL const a = M_PI * i / steps;
@@ -4485,54 +4494,183 @@ namespace
         }
     };
 
-    // glossy look: soft light from above, darker low on the sides, and a sharp shine where the light
-    // from above reflects toward the camera (Blinn-Phong), so it moves along the tube with the view
-    struct gTubeLight
+    struct gTubeMesh
     {
-        REAL eye[3];
-        void FromModelView()
-        {
-            GLfloat m[16];
-            glGetFloatv( GL_MODELVIEW_MATRIX, m );
-            // camera position: minus the translation, turned back by the rotation
-            eye[0] = -( m[0] * m[12] + m[1] * m[13] + m[2] * m[14] );
-            eye[1] = -( m[4] * m[12] + m[5] * m[13] + m[6] * m[14] );
-            eye[2] = -( m[8] * m[12] + m[9] * m[13] + m[10] * m[14] );
-        }
+        std::vector< float > tube;    // triangles: x y z nx ny nz
+        std::vector< float > shadow;  // triangles: x y z r g b a
+        std::vector< float > glow;    // triangles: x y z r g b a
     };
 
-    void sg_TubeColor( REAL r, REAL g, REAL b, REAL nx, REAL ny, REAL nz, REAL px, REAL py, REAL pz, gTubeLight const & light )
+    struct gTubeLook
     {
-        // diffuse: light from above, a little from the side, wrapped so the sides don't go black
-        REAL const ld[3] = { -.25f, .2f, .95f };
-        REAL diffuse = ( nx * ld[0] + ny * ld[1] + nz * ld[2] ) * .6f + .4f;
-        diffuse = diffuse < 0 ? 0 : diffuse;
-        REAL const shade = .22f + .78f * diffuse * diffuse;
+        gTubeProfile profile;
+        REAL width, shadowWidth, glowWidth, glowAlpha, r, g, b;
+        bool glowOn;
+    };
 
-        // specular: half way between the light and the camera
-        REAL vx = light.eye[0] - px, vy = light.eye[1] - py, vz = light.eye[2] - pz;
-        REAL const vl = sqrt( vx * vx + vy * vy + vz * vz );
-        REAL spec = 0;
-        if ( vl > 1E-4f )
-        {
-            vx /= vl; vy /= vl; vz /= vl;
-            REAL hx = ld[0] + vx, hy = ld[1] + vy, hz = ld[2] + vz;
-            REAL const hl = sqrt( hx * hx + hy * hy + hz * hz );
-            if ( hl > 1E-4f )
-            {
-                REAL const nh = ( nx * hx + ny * hy + nz * hz ) / hl;
-                if ( nh > 0 )
-                {
-                    REAL const nh2 = nh * nh, nh4 = nh2 * nh2, nh8 = nh4 * nh4, nh16 = nh8 * nh8;
-                    spec = nh16 * nh16 * .75f + nh8 * .12f;  // a sharp shine on a softer sheen
-                }
-            }
-        }
-        REAL const cr = r * shade, cg = g * shade, cb = b * shade;
-        glColor4f( cr + ( 1 - cr ) * spec, cg + ( 1 - cg ) * spec, cb + ( 1 - cb ) * spec, 1 );
+    void sg_Tri( std::vector< float > & v, REAL const * p, REAL const * q, REAL const * w, int stride )
+    {
+        v.insert( v.end(), p, p + stride );
+        v.insert( v.end(), q, q + stride );
+        v.insert( v.end(), w, w + stride );
     }
 
-    void sg_RenderTrailTubes( gRealColor const & color, std::vector< std::pair< eCoord, eCoord > > const & segments )
+    // a point of the tube surface: position and normal
+    void sg_TubePoint( REAL * out, eCoord const & c, eCoord const & left, gTubeProfile const & pr, int k )
+    {
+        out[0] = c.x + left.x * pr.x[k]; out[1] = c.y + left.y * pr.x[k]; out[2] = pr.z[k];
+        out[3] = left.x * pr.nx[k]; out[4] = left.y * pr.nx[k]; out[5] = pr.nz[k];
+    }
+
+    // ridge-shaped flat surface (alpha highest on the line, zero at the edges) for one side of a path piece
+    void sg_RidgeQuad( std::vector< float > & v, eCoord const & a, eCoord const & la, eCoord const & b, eCoord const & lb,
+                       REAL side, REAL w, REAL r, REAL g, REAL bl, REAL alpha )
+    {
+        REAL const zTop = .03f, zEdge = .004f;
+        REAL p[4][7] = {
+            { REAL( a.x ), REAL( a.y ), zTop, r, g, bl, alpha },
+            { REAL( b.x ), REAL( b.y ), zTop, r, g, bl, alpha },
+            { REAL( b.x + lb.x * w * side ), REAL( b.y + lb.y * w * side ), zEdge, r, g, bl, 0 },
+            { REAL( a.x + la.x * w * side ), REAL( a.y + la.y * w * side ), zEdge, r, g, bl, 0 } };
+        sg_Tri( v, p[0], p[1], p[2], 7 );
+        sg_Tri( v, p[0], p[2], p[3], 7 );
+    }
+
+    // sweeps the cross section along a path of points
+    // t0 and t1, if given, are the directions the path must start and end in, so that it meets its neighbors exactly
+    void sg_BuildSweep( gTubeMesh & mesh, std::vector< eCoord > const & path, gTubeLook const & look, eCoord const * t0 = 0, eCoord const * t1 = 0 )
+    {
+        int const n = int( path.size() );
+        if ( n < 2 )
+            return;
+        std::vector< eCoord > left( n );
+        for ( int i = 0; i < n; ++i )
+        {
+            eCoord t = path[ i + 1 < n ? i + 1 : i ] - path[ i > 0 ? i - 1 : i ];
+            if ( i == 0 && t0 )
+                t = *t0;
+            else if ( i == n - 1 && t1 )
+                t = *t1;
+            REAL const l = sqrt( t.NormSquared() );
+            t = l > EPS ? t * ( 1 / l ) : eCoord( 1, 0 );
+            left[i] = eCoord( -t.y, t.x );
+        }
+        gTubeProfile const & pr = look.profile;
+        for ( int i = 0; i + 1 < n; ++i )
+        {
+            for ( int k = 0; k + 1 < pr.n; ++k )
+            {
+                REAL A[6], B[6], C[6], D[6];
+                sg_TubePoint( A, path[i], left[i], pr, k );
+                sg_TubePoint( B, path[i], left[i], pr, k + 1 );
+                sg_TubePoint( C, path[i+1], left[i+1], pr, k + 1 );
+                sg_TubePoint( D, path[i+1], left[i+1], pr, k );
+                sg_Tri( mesh.tube, A, D, C, 6 );
+                sg_Tri( mesh.tube, A, C, B, 6 );
+            }
+            for ( int side = -1; side <= 1; side += 2 )
+            {
+                sg_RidgeQuad( mesh.shadow, path[i], left[i], path[i+1], left[i+1], side, look.shadowWidth, 0, 0, 0, .45f );
+                if ( look.glowOn )
+                    sg_RidgeQuad( mesh.glow, path[i], left[i], path[i+1], left[i+1], side, look.glowWidth, look.r, look.g, look.b, look.glowAlpha );
+            }
+        }
+    }
+
+    // a round end post standing on a point
+    void sg_BuildPost( gTubeMesh & mesh, eCoord const & c, gTubeLook const & look )
+    {
+        int const around = 12;
+        gTubeProfile const & pr = look.profile;
+        for ( int k = 0; k + 1 < pr.n - 1; ++k )
+        {
+            // the right half of the profile, turned around the point, up to the top
+            if ( pr.x[k] < -EPS || pr.x[k+1] < -EPS )
+                continue;
+            for ( int j = 0; j < around; ++j )
+            {
+                REAL const a0 = 2 * M_PI * j / around, a1 = 2 * M_PI * ( j + 1 ) / around;
+                REAL P[4][6];
+                for ( int e = 0; e < 4; ++e )
+                {
+                    REAL const a = ( e == 0 || e == 3 ) ? a0 : a1;
+                    int const q = ( e == 0 || e == 1 ) ? k : k + 1;
+                    P[e][0] = c.x + cos( a ) * pr.x[q]; P[e][1] = c.y + sin( a ) * pr.x[q]; P[e][2] = pr.z[q];
+                    P[e][3] = cos( a ) * pr.nx[q]; P[e][4] = sin( a ) * pr.nx[q]; P[e][5] = pr.nz[q];
+                }
+                sg_Tri( mesh.tube, P[0], P[1], P[2], 6 );
+                sg_Tri( mesh.tube, P[0], P[2], P[3], 6 );
+            }
+        }
+        // the flat surfaces: a low cone around the point
+        for ( int pass = 0; pass < 2; ++pass )
+        {
+            if ( pass == 1 && !look.glowOn )
+                break;
+            REAL const w = pass == 0 ? look.shadowWidth : look.glowWidth;
+            REAL const r = pass == 0 ? 0 : look.r, g = pass == 0 ? 0 : look.g, b = pass == 0 ? 0 : look.b;
+            REAL const alpha = pass == 0 ? .45f : look.glowAlpha;
+            std::vector< float > & v = pass == 0 ? mesh.shadow : mesh.glow;
+            for ( int j = 0; j < around; ++j )
+            {
+                REAL const a0 = 2 * M_PI * j / around, a1 = 2 * M_PI * ( j + 1 ) / around;
+                REAL P0[7] = { REAL( c.x ), REAL( c.y ), .03f, r, g, b, alpha };
+                REAL P1[7] = { REAL( c.x + cos( a0 ) * w ), REAL( c.y + sin( a0 ) * w ), .004f, r, g, b, 0 };
+                REAL P2[7] = { REAL( c.x + cos( a1 ) * w ), REAL( c.y + sin( a1 ) * w ), .004f, r, g, b, 0 };
+                sg_Tri( v, P0, P1, P2, 7 );
+            }
+        }
+    }
+
+    int sg_Q( REAL v ){ return int( floor( v * 32 + .5f ) ); }
+
+    struct gTubeEntry
+    {
+        gTubeMesh mesh;
+        int used = 0;
+        int born = 0;
+    };
+
+    struct gTubeCache
+    {
+        std::map< std::array< int, 7 >, gTubeEntry > entries;
+        std::string config;
+        int frame = 0;
+        int lastCall = 0;
+        // the finished part of the trail, kept in display lists (tube, shadow, glow), 24 pieces each,
+        // so that a turn only rebuilds the newest one
+        struct Chunk
+        {
+            GLuint lists = 0;
+            unsigned long long signature = 0;
+        };
+        std::vector< Chunk > chunks;
+
+        void DeleteLists()
+        {
+            for ( Chunk & chunk: chunks )
+                if ( chunk.lists )
+                    glDeleteLists( chunk.lists, 3 );
+            chunks.clear();
+        }
+    };
+    std::map< void const *, gTubeCache > sg_tubeCaches;
+    int sg_tubeCalls = 0;
+
+    // the display lists go away with the OpenGL context
+    void sg_ForgetTubeLists()
+    {
+        for ( auto & c: sg_tubeCaches )
+            c.second.DeleteLists();
+    }
+    rCallbackBeforeScreenModeChange sg_forgetTubeLists( &sg_ForgetTubeLists );
+
+    void sg_AppendFlat( std::vector< float > const & v, std::vector< float > & into )
+    {
+        into.insert( into.end(), v.begin(), v.end() );
+    }
+
+    void sg_RenderTrailTubes( void const * owner, gRealColor const & color, std::vector< std::pair< eCoord, eCoord > > const & segments )
     {
         if ( segments.empty() )
             return;
@@ -4549,155 +4687,61 @@ namespace
         REAL const width = ( sg_trailThickness < 1 ? 1 : ( sg_trailThickness > 10 ? 10 : sg_trailThickness ) ) * .1f;
         // as high as the Trail Height setting (CYCLE_TRAIL_HEIGHT), at least round
         REAL const height = sg_cycleTrailHeight > width * .5f ? sg_cycleTrailHeight : width * .5f;
-        gTubeProfile profile;
-        profile.Make( width, height );
-        gTubeLight light;
-        light.FromModelView();
 
-        RenderEnd();
-        glDisable( GL_TEXTURE_2D );
-        glDisable( GL_LIGHTING );
-        glDisable( GL_CULL_FACE );
-        glShadeModel( GL_SMOOTH );
+        gTubeLook look;
+        look.profile.Make( width, height );
+        look.width = width;
+        look.shadowWidth = width * 1.6f;
+        look.glowWidth = width * 3.5f;
+        // dark colors get a stronger glow, so it is visible at all
+        look.glowAlpha = .3f + .2f * ( 1 - ( r * .3f + g * .59f + b * .11f ) );
+        look.r = r; look.g = g; look.b = b;
+        look.glowOn = sg_trailFloorGlow;
 
-        // a soft shadow under the tubes, the same low-ridge trick as the glow below, so overlaps don't darken twice
+        // forget what was built for other looks
+        char config[160];
+        snprintf( config, sizeof( config ), "%d %.3f %.3f %d %.3f %.3f %.3f", int( sg_trailRoundCorners ), width, height, int( look.glowOn ), r, g, b );
+        gTubeCache & cache = sg_tubeCaches[ owner ];
+        if ( cache.config != config )
         {
-            REAL const shadowWidth = width * 1.6f;
-            REAL const zTop = .03f, zEdge = .004f;
-            glEnable( GL_BLEND );
-            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-            glDepthMask( GL_TRUE );
-            glDepthFunc( GL_LESS );
-            for ( auto const & seg: segments )
-            {
-                eCoord d = seg.second - seg.first;
-                REAL const len = sqrt( d.NormSquared() );
-                if ( len < EPS )
-                    continue;
-                d = d * ( 1 / len );
-                eCoord const side( -d.y * shadowWidth, d.x * shadowWidth );
-                BeginQuads();
-                for ( int s = -1; s <= 1; s += 2 )
-                {
-                    glColor4f( 0, 0, 0, .45f ); glVertex3f( seg.first.x, seg.first.y, zTop ); glVertex3f( seg.second.x, seg.second.y, zTop );
-                    glColor4f( 0, 0, 0, 0 ); glVertex3f( seg.second.x + side.x * s, seg.second.y + side.y * s, zEdge ); glVertex3f( seg.first.x + side.x * s, seg.first.y + side.y * s, zEdge );
-                }
-                RenderEnd();
-            }
-            for ( auto const & seg: segments )
-                for ( eCoord const & c: { seg.first, seg.second } )
-                {
-                    BeginTriangleFan();
-                    glColor4f( 0, 0, 0, .45f ); glVertex3f( c.x, c.y, zTop );
-                    glColor4f( 0, 0, 0, 0 );
-                    for ( int k = 0; k <= 16; ++k )
-                    {
-                        REAL const a = 2 * M_PI * k / 16;
-                        glVertex3f( c.x + cos( a ) * shadowWidth, c.y + sin( a ) * shadowWidth, zEdge );
-                    }
-                    RenderEnd();
-                }
-            glDepthFunc( GL_LEQUAL );
+            cache.entries.clear();
+            cache.DeleteLists();
+            cache.config = config;
         }
+        ++cache.frame;
+        cache.lastCall = ++sg_tubeCalls;
 
-        // soft light on the floor next to the tubes. It is shaped like a very low ridge, highest on the
-        // trail; with depth writing on, only the top surface counts where glows overlap (corners, joints,
-        // trails close together), so overlaps show the strongest glow instead of adding up into blotches.
-        if ( sg_trailFloorGlow )
+        // the pieces that stay as they were (kept in the display lists) and the ones built this frame
+        std::vector< gTubeMesh const * > stable, live;
+        std::vector< std::array< int, 7 > > stableKeys;
+        auto get = [&]( std::array< int, 7 > const & key, std::function< void( gTubeMesh & ) > build ) -> void
         {
-            REAL const glowWidth = width * 3.5f;
-            REAL const zTop = .045f, zEdge = .006f;
-            // dark colors get a stronger glow, so it is visible at all
-            REAL const glowAlpha = .3f + .2f * ( 1 - ( r * .3f + g * .59f + b * .11f ) );
-            glEnable( GL_BLEND );
-            glBlendFunc( GL_SRC_ALPHA, GL_ONE );
-            glDepthMask( GL_TRUE );
-            glDepthFunc( GL_LESS );
-            for ( auto const & seg: segments )
+            auto it = cache.entries.find( key );
+            if ( it == cache.entries.end() )
             {
-                eCoord d = seg.second - seg.first;
-                REAL const len = sqrt( d.NormSquared() );
-                if ( len < EPS )
-                    continue;
-                d = d * ( 1 / len );
-                eCoord const side( -d.y * glowWidth, d.x * glowWidth );
-                BeginQuads();
-                for ( int s = -1; s <= 1; s += 2 )
-                {
-                    glColor4f( r, g, b, glowAlpha ); glVertex3f( seg.first.x, seg.first.y, zTop ); glVertex3f( seg.second.x, seg.second.y, zTop );
-                    glColor4f( r, g, b, 0 ); glVertex3f( seg.second.x + side.x * s, seg.second.y + side.y * s, zEdge ); glVertex3f( seg.first.x + side.x * s, seg.first.y + side.y * s, zEdge );
-                }
-                RenderEnd();
+                gTubeEntry entry;
+                build( entry.mesh );
+                entry.born = cache.frame;
+                it = cache.entries.emplace( key, std::move( entry ) ).first;
             }
-            // low cones at the corners and ends, so the glow goes round them
-            for ( auto const & seg: segments )
-                for ( eCoord const & c: { seg.first, seg.second } )
-                {
-                    BeginTriangleFan();
-                    glColor4f( r, g, b, glowAlpha ); glVertex3f( c.x, c.y, zTop );
-                    glColor4f( r, g, b, 0 );
-                    for ( int k = 0; k <= 20; ++k )
-                    {
-                        REAL const a = 2 * M_PI * k / 20;
-                        glVertex3f( c.x + cos( a ) * glowWidth, c.y + sin( a ) * glowWidth, zEdge );
-                    }
-                    RenderEnd();
-                }
-            glDepthFunc( GL_LEQUAL );
-            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-        }
-
-        // a round post standing on point c: rounded ends (and, without rounded corners, round corner joints)
-        int const around = 20;
-        auto drawPost = [&]( eCoord const & c )
-        {
-            for ( int k = 0; k + 1 < profile.n - 1; ++k )
+            it->second.used = cache.frame;
+            if ( it->second.born == cache.frame )
+                live.push_back( &it->second.mesh );
+            else
             {
-                // the right half of the profile, turned around the point
-                if ( profile.x[k] < -EPS || profile.x[k+1] < -EPS )
-                    continue;
-                BeginQuadStrip();
-                for ( int j = 0; j <= around; ++j )
-                {
-                    REAL const a = 2 * M_PI * j / around, ca = cos( a ), sa = sin( a );
-                    for ( int q = k; q <= k + 1; ++q )
-                    {
-                        REAL const px = c.x + ca * profile.x[q], py = c.y + sa * profile.x[q];
-                        sg_TubeColor( r, g, b, ca * profile.nx[q], sa * profile.nx[q], profile.nz[q], px, py, profile.z[q], light );
-                        glVertex3f( px, py, profile.z[q] );
-                    }
-                }
-                RenderEnd();
+                stable.push_back( &it->second.mesh );
+                stableKeys.push_back( key );
             }
         };
-
-        // the tube swept along a path of points, turning smoothly where the path bends
-        auto drawPath = [&]( std::vector< eCoord > const & path )
+        auto piece = [&]( eCoord const & a, eCoord const & c )
         {
-            int const n = int( path.size() );
-            if ( n < 2 )
+            if ( ( c - a ).NormSquared() < 1E-6f )
                 return;
-            // sideways direction at every point: the average of the pieces meeting there
-            std::vector< eCoord > left( n );
-            for ( int i = 0; i < n; ++i )
-            {
-                eCoord t = path[ i + 1 < n ? i + 1 : i ] - path[ i > 0 ? i - 1 : i ];
-                REAL const l = sqrt( t.NormSquared() );
-                t = l > EPS ? t * ( 1 / l ) : eCoord( 1, 0 );
-                left[i] = eCoord( -t.y, t.x );
-            }
-            for ( int i = 0; i + 1 < n; ++i )
-            {
-                BeginQuadStrip();
-                for ( int k = 0; k < profile.n; ++k )
-                    for ( int e = i; e <= i + 1; ++e )
-                    {
-                        REAL const px = path[e].x + left[e].x * profile.x[k], py = path[e].y + left[e].y * profile.x[k];
-                        sg_TubeColor( r, g, b, left[e].x * profile.nx[k], left[e].y * profile.nx[k], profile.nz[k], px, py, profile.z[k], light );
-                        glVertex3f( px, py, profile.z[k] );
-                    }
-                RenderEnd();
-            }
+            get( { 0, sg_Q( a.x ), sg_Q( a.y ), sg_Q( c.x ), sg_Q( c.y ), 0, 0 }, [&]( gTubeMesh & m ){ sg_BuildSweep( m, std::vector< eCoord >{ a, c }, look ); } );
+        };
+        auto post = [&]( eCoord const & c )
+        {
+            get( { 2, sg_Q( c.x ), sg_Q( c.y ), 0, 0, 0, 0 }, [&]( gTubeMesh & m ){ sg_BuildPost( m, c, look ); } );
         };
 
         if ( sg_trailRoundCorners )
@@ -4752,66 +4796,227 @@ namespace
             for ( auto & line: lines )
             {
                 // drop repeated points and points in the middle of straight runs
-                std::vector< eCoord > corners;
+                std::vector< eCoord > c;
                 for ( eCoord const & p: line )
                 {
-                    if ( !corners.empty() && ( p - corners.back() ).NormSquared() < 1E-6f )
+                    if ( !c.empty() && ( p - c.back() ).NormSquared() < 1E-6f )
                         continue;
-                    if ( corners.size() >= 2 )
+                    if ( c.size() >= 2 )
                     {
-                        eCoord const a = corners[ corners.size() - 1 ] - corners[ corners.size() - 2 ], b = p - corners.back();
-                        if ( fabs( a.x * b.y - a.y * b.x ) < 1E-4f * sqrt( a.NormSquared() * b.NormSquared() ) && a.x * b.x + a.y * b.y > 0 )
-                            corners.pop_back();
+                        eCoord const d1 = c[ c.size() - 1 ] - c[ c.size() - 2 ], d2 = p - c.back();
+                        if ( fabs( d1.x * d2.y - d1.y * d2.x ) < 1E-4f * sqrt( d1.NormSquared() * d2.NormSquared() ) && d1.x * d2.x + d1.y * d2.y > 0 )
+                            c.pop_back();
                     }
-                    corners.push_back( p );
+                    c.push_back( p );
                 }
-                if ( corners.size() < 2 )
+                int const m = int( c.size() );
+                if ( m < 2 )
                     continue;
 
-                // replace every corner with a smooth bend
-                std::vector< eCoord > path( 1, corners.front() );
-                for ( size_t i = 1; i + 1 < corners.size(); ++i )
+                // every inner corner becomes a bend: where it starts and ends
+                std::vector< eCoord > in( m ), out( m );
+                std::vector< bool > bend( m, false );
+                for ( int i = 1; i + 1 < m; ++i )
                 {
-                    eCoord const p = corners[i];
-                    eCoord a = p - corners[i-1], b = corners[i+1] - p;
-                    REAL const la = sqrt( a.NormSquared() ), lb = sqrt( b.NormSquared() );
+                    eCoord a = c[i] - c[i-1], bb = c[i+1] - c[i];
+                    REAL const la = sqrt( a.NormSquared() ), lb = sqrt( bb.NormSquared() );
                     REAL const rr = std::min( radius, std::min( la, lb ) * .45f );
                     if ( rr < EPS )
-                    {
-                        path.push_back( p );
                         continue;
-                    }
-                    a = a * ( 1 / la ); b = b * ( 1 / lb );
-                    eCoord const in = p - a * rr, out = p + b * rr;
-                    int const steps = 10;
-                    for ( int k = 0; k <= steps; ++k )
+                    a = a * ( 1 / la ); bb = bb * ( 1 / lb );
+                    in[i] = c[i] - a * rr;
+                    out[i] = c[i] + bb * rr;
+                    bend[i] = true;
+                }
+                for ( int i = 0; i + 1 < m; ++i )
+                    piece( bend[i] ? out[i] : c[i], bend[i+1] ? in[i+1] : c[i+1] );
+                for ( int i = 1; i + 1 < m; ++i )
+                    if ( bend[i] )
                     {
-                        REAL const t = REAL( k ) / steps, u = 1 - t;
-                        path.push_back( in * ( u * u ) + p * ( 2 * u * t ) + out * ( t * t ) );
+                        eCoord const P = c[i], I = in[i], O = out[i];
+                        get( { 1, sg_Q( P.x ), sg_Q( P.y ), sg_Q( I.x ), sg_Q( I.y ), sg_Q( O.x ), sg_Q( O.y ) },
+                             [&]( gTubeMesh & mesh )
+                        {
+                            std::vector< eCoord > path;
+                            int const steps = 5;
+                            for ( int k = 0; k <= steps; ++k )
+                            {
+                                REAL const t = REAL( k ) / steps, u = 1 - t;
+                                path.push_back( I * ( u * u ) + P * ( 2 * u * t ) + O * ( t * t ) );
+                            }
+                            eCoord const d1 = P - I, d2 = O - P;
+                            sg_BuildSweep( mesh, path, look, &d1, &d2 );
+                        } );
                     }
-                }
-                path.push_back( corners.back() );
-                drawPath( path );
-                // round ends where the line stops
-                if ( ( corners.front() - corners.back() ).NormSquared() > 1E-4f )
-                {
-                    drawPost( corners.front() );
-                    drawPost( corners.back() );
-                }
+                post( c.front() );
+                post( c.back() );
             }
         }
         else
         {
             // straight pieces with round posts at every corner
-            for ( auto const & seg: segments )
-                drawPath( std::vector< eCoord >{ seg.first, seg.second } );
+            std::set< std::pair< int, int > > posts;
             for ( auto const & seg: segments )
             {
-                drawPost( seg.first );
-                drawPost( seg.second );
+                piece( seg.first, seg.second );
+                for ( eCoord const & p: { seg.first, seg.second } )
+                    if ( posts.insert( std::make_pair( sg_Q( p.x ), sg_Q( p.y ) ) ).second )
+                        post( p );
             }
         }
 
+        // forget pieces that are not needed any more (a few seconds), and caches of cycles long gone
+        if ( cache.frame % 120 == 0 )
+            for ( auto it = cache.entries.begin(); it != cache.entries.end(); )
+                it = it->second.used < cache.frame - 120 ? cache.entries.erase( it ) : std::next( it );
+        if ( sg_tubeCalls % 2000 == 0 )
+        {
+            for ( auto it = sg_tubeCaches.begin(); it != sg_tubeCaches.end(); )
+            {
+                if ( it->second.lastCall < sg_tubeCalls - 4000 )
+                {
+                    it->second.DeleteLists();
+                    it = sg_tubeCaches.erase( it );
+                }
+                else
+                    ++it;
+            }
+        }
+
+        // display lists cannot be made while another one is being recorded
+        bool const lists = !rDisplayList::IsRecording();
+        if ( !lists )
+        {
+            live.insert( live.end(), stable.begin(), stable.end() );
+            stable.clear();
+        }
+
+        static std::vector< float > tube, shadow, glow;
+        auto assemble = [&]( std::vector< gTubeMesh const * >::const_iterator from, std::vector< gTubeMesh const * >::const_iterator to )
+        {
+            tube.clear(); shadow.clear(); glow.clear();
+            for ( ; from != to; ++from )
+            {
+                sg_AppendFlat( ( *from )->tube, tube );
+                sg_AppendFlat( ( *from )->shadow, shadow );
+                sg_AppendFlat( ( *from )->glow, glow );
+            }
+        };
+
+        RenderEnd();
+        glEnableClientState( GL_VERTEX_ARRAY );
+
+        // the finished part of the trail goes into display lists again when it changed (a turn, the end eaten)
+        size_t const chunkSize = 24;
+        size_t const chunkCount = ( stable.size() + chunkSize - 1 ) / chunkSize;
+        while ( cache.chunks.size() > chunkCount )
+        {
+            if ( cache.chunks.back().lists )
+                glDeleteLists( cache.chunks.back().lists, 3 );
+            cache.chunks.pop_back();
+        }
+        cache.chunks.resize( chunkCount );
+        for ( size_t c = 0; c < chunkCount; ++c )
+        {
+            size_t const first = c * chunkSize, last = std::min( stable.size(), first + chunkSize );
+            unsigned long long signature = 1469598103934665603ULL;
+            for ( size_t i = first; i < last; ++i )
+                for ( int v: stableKeys[i] )
+                    signature = ( signature ^ static_cast< unsigned int >( v ) ) * 1099511628211ULL;
+            gTubeCache::Chunk & chunk = cache.chunks[c];
+            if ( chunk.lists && chunk.signature == signature )
+                continue;
+            if ( chunk.lists )
+                glDeleteLists( chunk.lists, 3 );
+            chunk.lists = glGenLists( 3 );
+            chunk.signature = signature;
+            assemble( stable.begin() + first, stable.begin() + last );
+            glEnableClientState( GL_NORMAL_ARRAY );
+            glVertexPointer( 3, GL_FLOAT, 6 * sizeof( float ), tube.empty() ? 0 : &tube[0] );
+            glNormalPointer( GL_FLOAT, 6 * sizeof( float ), tube.empty() ? 0 : &tube[0] + 3 );
+            glNewList( chunk.lists, GL_COMPILE );
+            if ( !tube.empty() )
+                glDrawArrays( GL_TRIANGLES, 0, GLsizei( tube.size() / 6 ) );
+            glEndList();
+            glDisableClientState( GL_NORMAL_ARRAY );
+            glEnableClientState( GL_COLOR_ARRAY );
+            for ( int pass = 0; pass < 2; ++pass )
+            {
+                std::vector< float > const & flat = pass == 0 ? shadow : glow;
+                glVertexPointer( 3, GL_FLOAT, 7 * sizeof( float ), flat.empty() ? 0 : &flat[0] );
+                glColorPointer( 4, GL_FLOAT, 7 * sizeof( float ), flat.empty() ? 0 : &flat[0] + 3 );
+                glNewList( chunk.lists + 1 + pass, GL_COMPILE );
+                if ( !flat.empty() )
+                    glDrawArrays( GL_TRIANGLES, 0, GLsizei( flat.size() / 7 ) );
+                glEndList();
+            }
+            glDisableClientState( GL_COLOR_ARRAY );
+        }
+
+        // what changed this frame
+        assemble( live.begin(), live.end() );
+
+        glPushAttrib( GL_ENABLE_BIT | GL_LIGHTING_BIT | GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        glDisable( GL_TEXTURE_2D );
+        glDisable( GL_CULL_FACE );
+        glShadeModel( GL_SMOOTH );
+
+        // soft shadow, and the glow if wanted, on the floor: low ridges, drawn first
+        glDisable( GL_LIGHTING );
+        glEnable( GL_BLEND );
+        glDepthMask( GL_TRUE );
+        glDepthFunc( GL_LESS );
+        for ( int pass = 0; pass < 2; ++pass )
+        {
+            if ( pass == 1 && !look.glowOn )
+                break;
+            std::vector< float > const & flat = pass == 0 ? shadow : glow;
+            glBlendFunc( GL_SRC_ALPHA, pass == 0 ? GL_ONE_MINUS_SRC_ALPHA : GL_ONE );
+            for ( gTubeCache::Chunk const & chunk: cache.chunks )
+                glCallList( chunk.lists + 1 + pass );
+            if ( !flat.empty() )
+            {
+                glEnableClientState( GL_COLOR_ARRAY );
+                glVertexPointer( 3, GL_FLOAT, 7 * sizeof( float ), &flat[0] );
+                glColorPointer( 4, GL_FLOAT, 7 * sizeof( float ), &flat[0] + 3 );
+                glDrawArrays( GL_TRIANGLES, 0, GLsizei( flat.size() / 7 ) );
+                glDisableClientState( GL_COLOR_ARRAY );
+            }
+        }
+        glDepthFunc( GL_LEQUAL );
+        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+        // the tubes: lit from above, with a shine toward the camera
+        glDisable( GL_BLEND );
+        glEnable( GL_LIGHTING );
+        glEnable( GL_LIGHT0 );
+        glDisable( GL_LIGHT1 );
+        GLfloat const lightPos[4] = { -.25f, .2f, .95f, 0 };
+        GLfloat const lightDiffuse[4] = { .95f, .95f, .95f, 1 }, lightSpecular[4] = { .9f, .9f, .9f, 1 }, none[4] = { 0, 0, 0, 1 };
+        GLfloat const ambient[4] = { .28f, .28f, .28f, 1 };
+        glLightfv( GL_LIGHT0, GL_POSITION, lightPos );
+        glLightfv( GL_LIGHT0, GL_DIFFUSE, lightDiffuse );
+        glLightfv( GL_LIGHT0, GL_SPECULAR, lightSpecular );
+        glLightfv( GL_LIGHT0, GL_AMBIENT, none );
+        glLightModelfv( GL_LIGHT_MODEL_AMBIENT, ambient );
+        glLightModeli( GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE );
+        GLfloat const material[4] = { r, g, b, 1 }, specular[4] = { .7f, .7f, .7f, 1 };
+        glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, material );
+        glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, specular );
+        glMaterialfv( GL_FRONT_AND_BACK, GL_EMISSION, none );
+        glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, 48 );
+        for ( gTubeCache::Chunk const & chunk: cache.chunks )
+            glCallList( chunk.lists );
+        if ( !tube.empty() )
+        {
+            glEnableClientState( GL_NORMAL_ARRAY );
+            glVertexPointer( 3, GL_FLOAT, 6 * sizeof( float ), &tube[0] );
+            glNormalPointer( GL_FLOAT, 6 * sizeof( float ), &tube[0] + 3 );
+            glDrawArrays( GL_TRIANGLES, 0, GLsizei( tube.size() / 6 ) );
+            glDisableClientState( GL_NORMAL_ARRAY );
+        }
+        glDisableClientState( GL_VERTEX_ARRAY );
+        glPopAttrib();
         glColor4f( 1, 1, 1, 1 );
     }
 }
@@ -4847,7 +5052,7 @@ void gCycleWallsDisplayListManager::RenderAll( eCamera const * camera, gCycle * 
                     }
                 }
         }
-        sg_RenderTrailTubes( cycle->trailColor_, segments );
+        sg_RenderTrailTubes( cycle, cycle->trailColor_, segments );
         if ( rTextureGroups::TextureMode[rTextureGroups::TEX_WALL] != 0 )
             glEnable( GL_TEXTURE_2D );
     }
