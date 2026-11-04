@@ -73,6 +73,45 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #endif
 
 #ifndef DEDICATED
+// ARB_sync fences (OpenGL 3.2): the only fences Mesa (AMD, Intel) and most modern drivers have.
+// Loaded straight from the driver, so they also work when GLEW is not available (Wayland).
+// ARB_SYNC_FENCE 0 turns them off again.
+static bool sr_arbSyncFence = true;
+static tConfItem< bool > sr_arbSyncFenceConf( "ARB_SYNC_FENCE", sr_arbSyncFence );
+
+namespace
+{
+    typedef void * ( *sr_FenceSyncFunc )( unsigned int condition, unsigned int flags );
+    typedef unsigned int ( *sr_ClientWaitSyncFunc )( void * sync, unsigned int flags, unsigned long long timeout );
+    typedef void ( *sr_DeleteSyncFunc )( void * sync );
+    sr_FenceSyncFunc sr_glFenceSync = 0;
+    sr_ClientWaitSyncFunc sr_glClientWaitSync = 0;
+    sr_DeleteSyncFunc sr_glDeleteSync = 0;
+
+    bool sr_ArbSyncAvailable()
+    {
+        static int result = -1;
+        if ( result < 0 )
+        {
+            result = 0;
+            char const * version = reinterpret_cast< char const * >( glGetString( GL_VERSION ) );
+            char const * extensions = reinterpret_cast< char const * >( glGetString( GL_EXTENSIONS ) );
+            int major = 0, minor = 0;
+            if ( version )
+                sscanf( version, "%d.%d", &major, &minor );
+            bool const supported = major > 3 || ( major == 3 && minor >= 2 ) || ( extensions && strstr( extensions, "GL_ARB_sync" ) );
+            if ( sr_arbSyncFence && supported )
+            {
+                sr_glFenceSync = reinterpret_cast< sr_FenceSyncFunc >( SDL_GL_GetProcAddress( "glFenceSync" ) );
+                sr_glClientWaitSync = reinterpret_cast< sr_ClientWaitSyncFunc >( SDL_GL_GetProcAddress( "glClientWaitSync" ) );
+                sr_glDeleteSync = reinterpret_cast< sr_DeleteSyncFunc >( SDL_GL_GetProcAddress( "glDeleteSync" ) );
+                result = sr_glFenceSync && sr_glClientWaitSync && sr_glDeleteSync ? 1 : 0;
+            }
+        }
+        return result == 1;
+    }
+}
+
 // fence support
 class rGLFence: public rGLuintObject
 {
@@ -87,6 +126,14 @@ public:
     // sets the fence up
     void Set()
     {
+        if( UseArbSync() )
+        {
+            if( sync_ )
+                sr_glDeleteSync( sync_ );
+            // GL_SYNC_GPU_COMMANDS_COMPLETE
+            sync_ = sr_glFenceSync( 0x9117, 0 );
+            return;
+        }
         sr_CheckGLError();
 #ifdef GLEW_NV_fence
         if( GLEW_NV_fence )
@@ -106,6 +153,19 @@ public:
     // finishes the fence (waits for all commands sent before it was set to be finished)
     void Finish()
     {
+        if( UseArbSync() )
+        {
+            if( sync_ )
+            {
+                // GL_SYNC_FLUSH_COMMANDS_BIT; 0x911B is GL_TIMEOUT_EXPIRED
+                int tries = 0;
+                while( sr_glClientWaitSync( sync_, 1, 100000000ULL ) == 0x911B && ++tries < 50 )
+                    ;
+                sr_glDeleteSync( sync_ );
+                sync_ = 0;
+            }
+            return;
+        }
         sr_CheckGLError();
 #ifdef GLEW_NV_fence
         if( GLEW_NV_fence )
@@ -127,8 +187,31 @@ public:
         Delete();
     }
 private:
+    void * sync_ = 0;   //!< the ARB_sync fence, if that is what is used
+
+    // true if this fence is an ARB_sync one: the others are not available
+    static bool UseArbSync()
+    {
+#ifdef HAVE_GLEW
+#ifdef GLEW_NV_fence
+        if( GLEW_NV_fence )
+            return false;
+#endif
+#ifdef GLEW_APPLE_fence
+        if( GLEW_APPLE_fence )
+            return false;
+#endif
+#endif
+        return sr_ArbSyncAvailable();
+    }
+
     static bool CheckAvailable()
     {
+        if( UseArbSync() )
+        {
+            con << "Using OpenGL sync fences, so that the CPU can prepare the next frame while the graphics card draws.\n";
+            return true;
+        }
 #ifdef HAVE_GLEW
 #ifdef GLEW_NV_fence
         if( GLEW_NV_fence )
