@@ -38,6 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "eSoundMixer.h"
 
 #include "rScreen.h"
+#include "eFloor.h"
 #include "rSysdep.h"
 #include "uInputQueue.h"
 //#include "eTess.h"
@@ -864,6 +865,9 @@ int main(int argc,char **argv){
 
         // best looking graphics and no frame rate cap, once, for new and existing players
         sr_ApplyGraphicsDefaults();
+#ifndef DEDICATED
+        se_ApplyRimStyleDefault();
+#endif
 
         // record and play back the recording debug level
         tRecorderSyncBase::GetDebugLevelPlayback();

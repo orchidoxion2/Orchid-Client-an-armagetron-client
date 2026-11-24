@@ -179,6 +179,16 @@ static void finite_xy_plane( const eCoord &pos,const eCoord &dir,REAL h, eRectan
 // FLOOR_STYLE: 0 the classic floor (as set in Detail Settings), 1 a plain floor in one color
 int se_floorStyle = 0;
 static tConfItem< int > se_floorStyleConf( "FLOOR_STYLE", se_floorStyle );
+// RIM_STYLE: the arena border walls; 0 the vanilla walls, 1 a low row of white dashes, -1 not chosen yet
+int se_rimStyle = -1;
+static tConfItem< int > se_rimStyleConf( "RIM_STYLE", se_rimStyle );
+
+void se_ApplyRimStyleDefault()
+{
+    // before there was a choice, the dashes came with the plain floor: keep what players have
+    if ( se_rimStyle != 0 && se_rimStyle != 1 )
+        se_rimStyle = se_floorStyle == 1 ? 1 : 0;
+}
 // FLOOR_PLAIN_RED/GREEN/BLUE: the color of the plain floor, 0 to 255
 int se_floorPlainRed = 15, se_floorPlainGreen = 19, se_floorPlainBlue = 23;
 static tConfItem< int > se_floorPlainRedConf( "FLOOR_PLAIN_RED", se_floorPlainRed );
@@ -604,7 +614,7 @@ void eGrid::display_simple( eCamera* cam, int viewer,bool floor,
         {
             su_FetchAndStoreSDLInput();
     
-            if ( se_floorStyle == 1 )
+            if ( se_rimStyle == 1 )
                 se_RenderDashedRim();
             else
                 eWallRim::RenderAll( cam );

@@ -57,6 +57,10 @@ void se_FloorColor(REAL& r, REAL& g, REAL &b);
 void se_MakeColorValid(REAL& r, REAL & g, REAL& b, REAL f);
 //! FLOOR_STYLE: 0 the classic floor, 1 a plain floor in one color
 extern int se_floorStyle;
+//! RIM_STYLE: the arena border walls, 0 the vanilla walls, 1 a low row of white dashes
+extern int se_rimStyle;
+//! sets RIM_STYLE from the floor style if it was never chosen; call after loading the settings
+void se_ApplyRimStyleDefault();
 //! FLOOR_PLAIN_RED/GREEN/BLUE: the color of the plain floor, 0 to 255
 extern int se_floorPlainRed, se_floorPlainGreen, se_floorPlainBlue;
 

@@ -3252,6 +3252,10 @@ void MainMenu(bool ingame){
         }
     };
 
+    uMenuItemSelection<int> rimStyle( &customization, "$customization_rim_style_text", "$customization_rim_style_help", se_rimStyle );
+    rimStyle.NewChoice( "$customization_rim_style_1_text", "$customization_rim_style_1_help", 1 );
+    rimStyle.NewChoice( "$customization_rim_style_0_text", "$customization_rim_style_0_help", 0 );
+
     // Customization > Floor (items are listed bottom to top)
     uMenu floorMenu("$customization_floor_text");
     uMenuItemSlider floorBlue( &floorMenu, "$customization_own_cycle_b_text", "$customization_floor_color_help", se_floorPlainBlue, 0, 255, 1 );

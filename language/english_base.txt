@@ -2062,6 +2062,12 @@ customization_custom_hud_text	Custom HUD:
 customization_custom_hud_help	On: your own HUD from the HUD editor is in use. Off: the HUD that comes with the game. Your own HUD is kept either way.
 
 customization_preview_text	Preview
+customization_rim_style_text	Arena Walls:
+customization_rim_style_help	How the walls around the arena look. Only changes how they look on your screen.
+customization_rim_style_0_text	Vanilla
+customization_rim_style_0_help	The normal tall walls of Armagetron.
+customization_rim_style_1_text	Dashed
+customization_rim_style_1_help	A low row of white dashes.
 customization_floor_text	Floor
 customization_floor_help	How the arena floor looks. Only changes how it looks on your screen.
 customization_floor_style_text	Floor Style:
